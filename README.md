@@ -1,4 +1,4 @@
-# SAE - Système d'information de billetterie & sécurité
+# SAE - Système d’Information (SI) de billetterie & sécurité
 
 ## 1) Objectif
 Mettre en place un **MVP de billetterie de spectacles** et définir une **stratégie de défense** face aux attaques (SQL injection, vol de session, malware/ransomware, fuite de données, DoS).
@@ -53,7 +53,7 @@ Mettre en place un **MVP de billetterie de spectacles** et définir une **strat�
 - Définir les exigences sécurité et conformité.
 
 ### Phase 2 — Conception
-- **SI** : architecture (Flask/Node.js + **MySQL requis en dev, test et production**), modèle de données, règles métier ; SQLite uniquement pour un prototype local non cible.
+- **SI** : architecture (Flask/Node.js + **MySQL requis en dev, test et production**), modèle de données, règles métier ; SQLite uniquement pour un prototype local, non utilisé en validation ni en production.
 - **Pirate** : plan de tests d’intrusion (SQLi, XSS, session hijacking, DoS, social engineering).
 
 ### Phase 3 — Déploiement
