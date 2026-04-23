@@ -53,8 +53,7 @@ Mettre en place un **MVP de billetterie de spectacles** et définir une **strat�
 - Définir les exigences sécurité et conformité.
 
 ### Phase 2 — Conception
-- **SI** : architecture (Flask/Node.js + MySQL en dev/test/production), modèle de données, règles métier.
-  - SQLite peut être toléré pour un prototype local, mais pas comme cible de référence.
+- **SI** : architecture (Flask/Node.js + **MySQL requis en dev, test et production**), modèle de données, règles métier ; SQLite uniquement pour un prototype local non cible.
 - **Pirate** : plan de tests d’intrusion (SQLi, XSS, session hijacking, DoS, social engineering).
 
 ### Phase 3 — Déploiement
