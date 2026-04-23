@@ -56,7 +56,7 @@ Mettre en place un **MVP de billetterie de spectacles** et définir une **strat�
 ### Phase 2 — Conception
 - **SI** : architecture (Flask/Node.js + MySQL), modèle de données, règles métier.
   - **MySQL requis en dev, test et production**.
-  - SQLite uniquement pour un prototype local, non utilisé en validation ni en production (concurrence et exploitation multi-utilisateurs limitées).
+  - SQLite uniquement pour un prototype local, non utilisé en validation ni en production (écritures concurrentes et gestion de connexions multi-utilisateurs trop limitées).
 - **Pirate** : plan de tests d’intrusion (SQLi, XSS, session hijacking, DoS, social engineering).
 
 ### Phase 3 — Déploiement
