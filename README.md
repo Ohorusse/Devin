@@ -33,7 +33,7 @@ Mettre en place un **MVP de billetterie de spectacles** et définir une **strat�
   - Protection CSRF sur formulaires sensibles.
   - En-têtes de sécurité (CSP, X-Frame-Options, HSTS, etc.).
 - **Session**
-  - Cookies `HttpOnly`, `Secure`, `SameSite=Lax` par défaut, `Strict` pour les parcours sans authentification ou redirection cross-site.
+  - Cookies `HttpOnly`, `Secure`, `SameSite=Strict` pour le cookie de session (ou `Lax` uniquement si un parcours SSO/redirection cross-site l’impose).
   - Rotation de session après authentification.
   - Expiration de session et invalidation à la déconnexion.
 - **Données & confidentialité**
@@ -53,8 +53,8 @@ Mettre en place un **MVP de billetterie de spectacles** et définir une **strat�
 - Définir les exigences sécurité et conformité.
 
 ### Phase 2 — Conception
-- **SI** : architecture (Flask/Node.js + SQLite en dev/test, MySQL en production), modèle de données, règles métier.
-  - Prévoir la compatibilité du schéma (types SQL, contraintes, index) et des scripts de migration SQLite -> MySQL.
+- **SI** : architecture (Flask/Node.js + MySQL en dev/test/production), modèle de données, règles métier.
+  - SQLite peut être toléré pour un prototype local, mais pas comme cible de référence.
 - **Pirate** : plan de tests d’intrusion (SQLi, XSS, session hijacking, DoS, social engineering).
 
 ### Phase 3 — Déploiement
