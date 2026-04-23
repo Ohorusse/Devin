@@ -24,7 +24,7 @@ Mettre en place un **MVP de billetterie de spectacles** et définir une **strat�
 
 ## 4) Exigences sécurité (défense)
 - **Authentification**
-  - Mot de passe fort (longueur minimale + complexité), hash Argon2/bcrypt + sel.
+  - Mot de passe fort (longueur minimale + complexité), hash Argon2/bcrypt + **sel unique par mot de passe**.
   - Procédure “mot de passe oublié” avec jeton unique, expiration courte.
   - Limitation des tentatives de connexion (anti brute-force).
 - **Protection applicative**
@@ -33,7 +33,7 @@ Mettre en place un **MVP de billetterie de spectacles** et définir une **strat�
   - Protection CSRF sur formulaires sensibles.
   - En-têtes de sécurité (CSP, X-Frame-Options, HSTS, etc.).
 - **Session**
-  - Cookies `HttpOnly`, `Secure`, `SameSite`.
+  - Cookies `HttpOnly`, `Secure`, `SameSite=Lax` (ou `Strict` pour les parcours compatibles).
   - Rotation de session après authentification.
   - Expiration de session et invalidation à la déconnexion.
 - **Données & confidentialité**
@@ -53,7 +53,7 @@ Mettre en place un **MVP de billetterie de spectacles** et définir une **strat�
 - Définir les exigences sécurité et conformité.
 
 ### Phase 2 — Conception
-- **SI** : architecture (Flask/Node.js + SQLite/MySQL), modèle de données, règles métier.
+- **SI** : architecture (Flask/Node.js + SQLite en dev/test, MySQL en production), modèle de données, règles métier.
 - **Pirate** : plan de tests d’intrusion (SQLi, XSS, session hijacking, DoS, social engineering).
 
 ### Phase 3 — Déploiement
