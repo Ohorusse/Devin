@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Événements – Admin{% endblock %}
+{% block content %}
+<div class="page">
+    <div class="flex-between mb-3">
+        <h1>Événements</h1>
+        <a href="{{ url_for('admin.nouveau_spectacle') }}" class="btn btn-primary">+ Nouvel événement</a>
+    </div>
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th>Date</th>
+                    <th>Prix</th>
+                    <th>Places</th>
+                    <th>Statut</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for s in spectacles %}
+            <tr>
+                <td class="font-bold">{{ s.titre }}</td>
+                <td>{{ s.date_heure.strftime('%d/%m/%Y') }}</td>
+                <td>{{ '%.2f'|format(s.prix_unitaire) }} €</td>
+                <td>{{ s.places_restantes }}/{{ s.capacite_totale }}</td>
+                <td>{{ 'Actif' if s.est_actif else 'Inactif' }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('admin.supprimer_spectacle', id=s.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Désactiver cet événement ?')">Désactiver</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

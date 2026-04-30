@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Administration – TicketSecure{% endblock %}
+{% block content %}
+<div class="page">
+    <h1 class="mb-3">Administration</h1>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.utilisateurs }}</div>
+            <div class="stat-label">Utilisateurs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.spectacles }}</div>
+            <div class="stat-label">Événements actifs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.commandes }}</div>
+            <div class="stat-label">Commandes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.avis_en_attente }}</div>
+            <div class="stat-label">Avis en attente</div>
+        </div>
+    </div>
+
+    <div class="admin-tabs">
+        <a href="{{ url_for('admin.spectacles') }}" class="btn btn-primary">Gérer les événements</a>
+        <a href="{{ url_for('admin.utilisateurs') }}" class="btn btn-secondary">Gérer les utilisateurs</a>
+        <a href="{{ url_for('admin.avis') }}" class="btn btn-secondary">Modérer les avis</a>
+        <a href="{{ url_for('admin.logs') }}" class="btn btn-secondary">Logs de connexion</a>
+    </div>
+</div>
+{% endblock %}

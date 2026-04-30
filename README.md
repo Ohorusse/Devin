@@ -1,5 +1,32 @@
 # SAE - Système d’Information (SI) de billetterie & sécurité
 
+## Structure du dépôt
+
+```
+ticketsecure/
+├── README.md
+├── docs/
+│   ├── SAE_Seance1_TicketSecure.docx   # Livrable séance 1
+│   └── diagrams/
+│       ├── use_case.puml               # Cas d’utilisation
+│       ├── activity_achat.puml         # Activité : achat de ticket
+│       └── activity_inscription.puml   # Activité : inscription utilisateur
+├── assets/
+│   ├── LOGO.png
+│   └── LOGO_P.png
+├── app/                                # (Phase 2+) Code Flask
+├── templates/                          # (Phase 2+) Templates HTML
+└── static/                             # (Phase 2+) CSS/JS/images
+```
+
+### Générer les diagrammes PlantUML
+
+```bash
+java -jar plantuml.jar docs/diagrams/*.puml
+```
+
+
+
 ## 1) Objectif
 Mettre en place un **MVP de billetterie de spectacles** et définir une **stratégie de défense** face aux attaques (SQL injection, vol de session, malware/ransomware, fuite de données, DoS).
 

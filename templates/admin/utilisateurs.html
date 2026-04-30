@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Utilisateurs – Admin{% endblock %}
+{% block content %}
+<div class="page">
+    <h1 class="mb-3">Utilisateurs ({{ users|length }})</h1>
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>E-mail</th>
+                    <th>Rôle</th>
+                    <th>Actif</th>
+                    <th>Inscription</th>
+                    <th>Dernière connexion</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for u in users %}
+            <tr>
+                <td class="font-bold">{{ u.prenom }} {{ u.nom }}</td>
+                <td>{{ u.email }}</td>
+                <td>{{ u.role }}</td>
+                <td>{{ '✓' if u.est_actif else '✗' }}</td>
+                <td>{{ u.date_inscription.strftime('%d/%m/%Y') }}</td>
+                <td>{{ u.derniere_connexion.strftime('%d/%m/%Y') if u.derniere_connexion else '–' }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

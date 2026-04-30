@@ -1,0 +1,77 @@
+@startuml activity_achat_ticket
+title Diagramme d'Activité – Achat de ticket(s) de spectacle
+
+skinparam backgroundColor White
+skinparam activity {
+  BackgroundColor LightBlue
+  BorderColor DarkBlue
+  ArrowColor DarkBlue
+  StartColor DarkBlue
+  EndColor DarkRed
+}
+
+|Utilisateur|
+start
+:Accéder à la plateforme;
+:Se connecter (e-mail + MDP);
+
+|Système|
+:Vérifier les identifiants\n(bcrypt + session Flask);
+
+if (Identifiants valides ?) then (oui)
+  :Créer session sécurisée\n(token CSRF, HttpOnly cookie);
+  |Utilisateur|
+  :Parcourir le catalogue;
+  :Sélectionner un spectacle;
+  :Choisir la quantité\n(1 à 4 tickets);
+
+  |Système|
+  :Vérifier la disponibilité\n(places restantes >= quantité);
+
+  if (Places disponibles ?) then (oui)
+    :Calculer le montant total;
+    |Utilisateur|
+    :Confirmer la commande;
+
+    |Système|
+    :Vérifier le quota utilisateur\n(total acheté + quantité <= 4);
+
+    if (Quota respecté ?) then (oui)
+      :Enregistrer la commande\n(INSERT en transaction SQL);
+      :Décrémenter places_restantes;
+      :Générer numéro de facture\n(UUID + date);
+      :Générer QR code ticket;
+      :Envoyer e-mail de confirmation\n+ lien facture PDF;
+
+      |Utilisateur|
+      :Consulter commande + facture;
+      stop
+    else (non – quota dépassé)
+      |Système|
+      :Afficher erreur :\n"Maximum 4 tickets par spectacle";
+      |Utilisateur|
+      :Modifier la quantité;
+      stop
+    endif
+  else (non – complet)
+    |Système|
+    :Afficher :\n"Spectacle complet";
+    |Utilisateur|
+    :Consulter d'autres spectacles;
+    stop
+  endif
+else (non – identifiants incorrects)
+  |Système|
+  :Incrémenter compteur échecs;
+  if (>= 5 tentatives ?) then (oui)
+    :Verrouiller compte 15 min;
+    :Alerter l'administrateur;
+  else (non)
+    :Afficher message d'erreur générique;
+  endif
+  |Utilisateur|
+  :Réessayer ou récupérer MDP;
+  stop
+endif
+
+@enduml

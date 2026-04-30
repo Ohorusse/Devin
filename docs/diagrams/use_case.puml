@@ -1,0 +1,78 @@
+@startuml use_case_billetterie
+title Diagramme de Cas d'Utilisation – Système de Billetterie TicketSecure
+
+left to right direction
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor LightBlue
+  BorderColor DarkBlue
+  ArrowColor DarkBlue
+}
+
+actor "Visiteur" as V
+actor "Utilisateur\nauthentifié" as U
+actor "Administrateur" as A
+
+rectangle "TicketSecure – Système de billetterie" {
+  ' Visiteur
+  usecase "Consulter le catalogue\ndes spectacles" as UC1
+  usecase "Rechercher un spectacle" as UC2
+  usecase "Créer un compte" as UC3
+  usecase "Se connecter" as UC4
+  usecase "Récupérer son\nmot de passe" as UC5
+
+  ' Utilisateur authentifié
+  usecase "Acheter des tickets\n(max 4 / spectacle)" as UC6
+  usecase "Consulter ses commandes" as UC7
+  usecase "Télécharger sa facture" as UC8
+  usecase "Déposer un avis\net une note" as UC9
+  usecase "Modifier son profil" as UC10
+  usecase "Se déconnecter" as UC11
+
+  ' Admin
+  usecase "Gérer les événements\n(CRUD)" as UC12
+  usecase "Modérer les avis" as UC13
+  usecase "Consulter les logs\nde sécurité" as UC14
+  usecase "Gérer les utilisateurs" as UC15
+}
+
+V --> UC1
+V --> UC2
+V --> UC3
+V --> UC4
+V --> UC5
+
+U --> UC1
+U --> UC2
+U --> UC6
+U --> UC7
+U --> UC8
+U --> UC9
+U --> UC10
+U --> UC11
+
+A --> UC12
+A --> UC13
+A --> UC14
+A --> UC15
+A --> UC1
+
+' Relations include / extend
+UC6 .> UC4 : <<include>>
+UC7 .> UC4 : <<include>>
+UC9 .> UC6 : <<extend>>\n(avoir acheté)
+UC8 .> UC7 : <<include>>
+
+note right of UC6
+  Contrainte métier :
+  max 4 tickets par
+  spectacle et par compte
+end note
+
+note right of UC3
+  Vérification e-mail
+  obligatoire avant
+  activation du compte
+end note
+
+@enduml

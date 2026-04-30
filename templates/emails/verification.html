@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"></head>
+<body style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:2rem;">
+    <h2>Bienvenue sur TicketSecure, {{ utilisateur.prenom }} !</h2>
+    <p>Cliquez sur le bouton ci-dessous pour activer votre compte :</p>
+    <a href="{{ lien }}" style="display:inline-block;padding:0.75rem 1.5rem;background:#333;color:#fff;text-decoration:none;border-radius:4px;">
+        Activer mon compte
+    </a>
+    <p style="margin-top:1.5rem;color:#888;font-size:0.85rem;">
+        Ce lien est valable 30 minutes. Si vous n'avez pas créé de compte, ignorez cet e-mail.
+    </p>
+    <p style="color:#888;font-size:0.85rem;">Ou copiez ce lien : {{ lien }}</p>
+</body>
+</html>

@@ -1,0 +1,215 @@
+SAÉ Cybersécurité – Système de Billetterie en Ligne
+Livrable – Séance 1 : Analyse des besoins & Conception préliminaire
+
+
+Équipe
+TicketSecure Dev Team
+Membres
+Luis Angel Garcia Muñoz  |  Hugo Henneuse  |  Clément Bresle
+Formation
+Cycle Ingénieur – Informatique & Cybersécurité (3/5)
+Date
+Séance 1 – Phase d'Analyse
+Dépôt GitHub
+https://github.com/Ohorusse/Devin
+
+
+1. Équipe & Répartition des tâches
+L'équipe est composée de trois membres. Chacun endosse un rôle principal tout en contribuant aux autres tâches selon les besoins.
+Membre
+Rôle principal
+Tâches associées
+Luis Angel Garcia Muñoz
+Lead développeur Backend
+Architecture Flask, base de données, API, sécurité backend (hachage MDP, sessions)
+Hugo Henneuse
+Développeur Frontend & UX
+Templates HTML/CSS/JS, maquettes Figma, intégration des formulaires, accessibilité
+Clément Bresle
+Responsable Sécurité & Docs
+Analyse des risques, rédaction des procédures, diagrammes PlantUML, rapport
+
+2. Analyse des besoins – Méthode 5W2H
+La méthode 5W2H (What, Why, Who, Where, When, How, How much) permet de cadrer rapidement les besoins du projet avant toute conception technique.
+2.1 WHAT – Quoi ?
+Développer un système d'information de billetterie en ligne (MVP) permettant :
+L'achat de tickets de spectacle en ligne (max 4 tickets/spectacle/compte)
+La création et gestion de comptes utilisateurs authentifiés
+Le dépôt et la consultation d'avis et de notes sur les spectacles
+La consultation du catalogue d'événements (dates, prix, illustrations)
+La génération de factures dématérialisées
+La récupération de mot de passe en cas d'oubli
+2.2 WHY – Pourquoi ?
+Objectif pédagogique : concevoir un SI réaliste exposé aux attaques, puis identifier et corriger ses vulnérabilités.
+Objectif fonctionnel : fournir une plateforme sécurisée d'achat de billets à des utilisateurs finaux.
+Risques à anticiper : injections SQL, détournement de session, fuites de données, malwares, déni de service (DoS), ingénierie sociale.
+2.3 WHO – Qui ?
+Créateurs : équipe dev (3 personnes) – rôles Backend, Frontend, Sécurité/Docs
+Utilisateurs finaux : toute personne souhaitant acheter un ticket de spectacle
+Administrateur : gestionnaire de la plateforme (ajout/suppression d'événements)
+Attaquants simulés : équipe pirate de la SAÉ (tests de pénétration)
+2.4 WHERE – Où ?
+Développement local : machines personnelles (Windows/Linux/Mac) + VM si besoin
+Backend : serveur Flask (Python) sur localhost puis potentiellement hébergé
+Base de données : SQLite en développement, migration possible vers MySQL
+Versionnement : dépôt GitLab UPHF – https://gitlab.uphf.fr/<groupe>/ticketsecure
+Maquettes : Figma (version gratuite)
+Diagrammes : PlantUML
+2.5 WHEN – Quand ?
+Phase 1 (séance 1) : Analyse des besoins, conception préliminaire → livrable ZIP
+Phase 2 (séances 2-3) : Conception détaillée – base de données, routes Flask, maquettes
+Phase 3 (séances 4-5) : Développement MVP + tests unitaires + premières attaques
+Phase 4 (séance 6) : Formation utilisateurs, documentation sécurité
+Phase 5 (séance 7+) : Maintenance, audit de sécurité, présentation orale finale
+2.6 HOW – Comment ?
+Backend : Python 3 + Flask (routing, sessions, Jinja2) + SQLAlchemy ou sqlite3
+Frontend : HTML5, CSS3, JavaScript vanilla (MVP – pas de framework JS lourd)
+Sécurité : bcrypt (hachage MDP), tokens CSRF, HTTPS (auto-signé en dev), validation serveur, gestion des sessions sécurisées
+Récupération MDP : token temporaire signé envoyé par e-mail (SMTP ou Mailhog en dev)
+Modélisation : PlantUML pour cas d'utilisation et diagrammes d'activité
+Maquettes : Figma (wireframes basse fidélité)
+CI/CD : GitLab CI basique (lint + tests automatiques)
+2.7 HOW MUCH – Combien ?
+Coût financier : nul (outils open-source, hébergement académique UPHF)
+Logiciels nécessaires : Python 3.11+, Flask, SQLite, Git, PlantUML, Figma (gratuit), VS Code
+Connaissances requises : Python/Flask, SQL, HTML/CSS/JS, bases de la cybersécurité (OWASP Top 10)
+Charge estimée : ~30h/personne sur l'ensemble du projet (hors présentations)
+Risques projet : complexité sécurité sous-estimée → buffer de 20% prévu
+3. Analyse des risques (Phase 1)
+Identification des principaux risques de sécurité selon l'OWASP Top 10, adaptés au contexte d'une billetterie en ligne.
+Risque
+Description
+Vecteur d'attaque
+Contre-mesure envisagée
+Injection SQL
+Manipulation des requêtes SQL via les formulaires
+Champs login, recherche, avis
+ORM SQLAlchemy / requêtes paramétrées
+Détournement de session
+Vol du cookie de session pour usurper un compte
+XSS, écoute réseau (MITM)
+HTTPS, HttpOnly+Secure cookie, rotation de token
+Fuite de données
+Accès non autorisé aux données personnelles/paiement
+Accès BDD, dump, brute force
+Chiffrement BDD, bcrypt MDP, RBAC strict
+XSS (Cross-Site Scripting)
+Injection de scripts malveillants dans les avis/commentaires
+Formulaire d'avis non filtré
+Échappement HTML côté serveur (Jinja2 auto-escape)
+Brute force / DoS
+Saturation du serveur ou cassage de MDP par force brute
+Automatisation (scripts, botnets)
+Rate limiting, CAPTCHA, verrouillage compte
+Phishing / Ingénierie sociale
+Hameçonnage des utilisateurs par faux e-mails
+E-mails imitant la plateforme
+Sensibilisation utilisateurs, SPF/DKIM, URLs explicites
+
+4. Conception préliminaire
+4.1 Données nécessaires
+Compte utilisateur
+id_utilisateur (PK, auto-increment)
+email (unique, NOT NULL) – identifiant de connexion
+mot_de_passe_hash (bcrypt, NOT NULL)
+nom, prenom (NOT NULL)
+date_naissance (pour vérification d'âge si nécessaire)
+telephone (optionnel)
+adresse_facturation (rue, code postal, ville, pays)
+token_reset_mdp + expiration_token (récupération MDP)
+date_inscription, derniere_connexion
+est_actif (booléen – compte vérifié par e-mail)
+role (utilisateur / administrateur)
+Spectacles & Événements
+id_spectacle (PK)
+titre, description
+date_heure, lieu
+prix_unitaire
+capacite_totale, places_restantes
+illustration_url (image affiche)
+categorie (concert, théâtre, danse…)
+Commandes & Tickets
+id_commande (PK), id_utilisateur (FK), id_spectacle (FK)
+quantite (1 à 4 max, contrainte CHECK)
+montant_total
+date_commande, statut (en_attente / confirmé / annulé)
+numero_facture (généré automatiquement)
+code_qr_ticket (identifiant unique par ticket)
+Avis & Notes
+id_avis (PK), id_utilisateur (FK), id_spectacle (FK)
+note (1 à 5)
+commentaire (texte, taille limitée)
+date_avis
+est_valide (modération basique)
+4.2 Architecture technique envisagée
+L'architecture suit le patron MVC (Modèle-Vue-Contrôleur) via Flask :
+Modèle : SQLite (dev) avec SQLAlchemy ORM – entités Utilisateur, Spectacle, Commande, Avis
+Vue : Templates Jinja2 (HTML/CSS) – pages publiques + espace personnel authentifié
+Contrôleur : Blueprints Flask (auth, catalogue, commandes, admin, avis)
+Sécurité : Flask-Login (sessions), Flask-WTF (CSRF), Werkzeug (bcrypt), Flask-Limiter (rate limiting)
+E-mails : Flask-Mail (SMTP) ou Mailhog en développement local
+4.3 Procédures de sécurité prévues
+Procédure
+Mise en œuvre
+Création de mot de passe sécurisé
+Minimum 12 caractères, majuscule + minuscule + chiffre + symbole. Hachage bcrypt (coût 12). Interdiction des 10 MDP les plus courants (liste HIBP).
+Oubli de mot de passe
+Token aléatoire (secrets.token_urlsafe) stocké hashé en BDD, valide 30 min. Envoi lien unique par e-mail. Invalidation après usage ou expiration.
+Vérification de compte
+E-mail de confirmation à l'inscription. Token signé (itsdangerous). Compte inactif jusqu'à validation.
+Verrouillage après tentatives
+5 tentatives de connexion échouées → compte verrouillé 15 min. Log des tentatives. Alertes admin si attaque détectée.
+
+5. Diagrammes PlantUML 
+Les diagrammes suivants sont définis en PlantUML et doivent être générés puis intégrés dans ce document. Les sources .puml sont disponibles dans le dépôt GitLab.
+5.1 Use Case – Acteurs et fonctionnalités
+[Voir fichier : diagrams/use_case.puml dans le dépôt GitLab]
+Acteurs : Visiteur, Utilisateur authentifié, Administrateur
+Cas d'utilisation principaux : Consulter catalogue, Créer compte, S'authentifier, Acheter tickets (max 4), Déposer un avis, Générer facture, Récupérer MDP, Gérer événements (admin)
+5.2 Diagramme d'activité – Achat de ticket
+[Voir fichier : diagrams/activity_achat.puml dans le dépôt GitLab]
+Flux : Connexion → Sélection spectacle → Choix quantité (≤4) → Vérification disponibilité → Paiement (simulé en MVP) → Génération ticket + facture → E-mail de confirmation
+5.3 Diagramme d'activité – Création de compte & vérification e-mail
+[Voir fichier : diagrams/activity_inscription.puml dans le dépôt GitLab]
+
+6. Planning prévisionnel
+Phase
+Contenu
+Responsable(s)
+Échéance
+Phase 1
+Analyse besoins, 5W2H, diagrammes, maquettes Figma
+Tous
+Séance 1
+Phase 2
+Modèle BDD, routes Flask, templates HTML, logique sécurité
+Garcia Muñoz + Henneuse
+Séances 2-3
+Phase 3
+MVP fonctionnel, tests, déploiement, premiers tests attaque
+Tous
+Séances 4-5
+Phase 4
+Documentation utilisateur, formation, procédures admin
+Bresle
+Séance 6
+Phase 5
+Audit sécurité post-attaque, correctifs, rapport final
+Tous
+Séance 7+
+
+7. Déclaration d'utilisation de l'IA
+Conformément aux consignes de la SAÉ, voici la déclaration de nos usages de l'IA générative :
+Outil IA
+Usage
+Prompt utilisé
+Claude (Anthropic)
+Structuration du document 5W2H, analyse des risques OWASP, identification des données nécessaires
+«  Nous développons un SI de billetterie en ligne (MVP Flask). Génère une analyse 5W2H complète et une table des risques OWASP adaptée. »
+Claude (Anthropic)
+Génération des sources PlantUML (use case, activité)
+«  Génère le code PlantUML d'un diagramme de cas d'utilisation pour une billetterie avec acteurs Visiteur, Utilisateur, Admin. »
+Claude (Anthropic)
+Proposition d'architecture MVC Flask et choix des bibliothèques de sécurité
+«  Quelles bibliothèques Flask recommandes-tu pour sécuriser un MVP : sessions, CSRF, hachage MDP, rate limiting, e-mails ? »
+Note : tous les éléments produits ont été relus, vérifiés et adaptés par les membres de l'équipe. L'IA a servi d'outil de structuration, non de substitut à la réflexion.

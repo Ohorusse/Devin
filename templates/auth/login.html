@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Connexion – TicketSecure{% endblock %}
+{% block content %}
+<div class="centered">
+    <div style="width:100%;max-width:440px;">
+        <div class="card">
+            <div class="card-body-lg">
+                <h1 class="text-center mb-3">Connexion</h1>
+                <form method="POST" class="space-y-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="votre@email.com" required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label for="mot_de_passe">Mot de passe</label>
+                        <input type="password" id="mot_de_passe" name="mot_de_passe" placeholder="••••••••" required>
+                    </div>
+                    <div class="text-right text-sm mt-1">
+                        <a href="{{ url_for('auth.mot_de_passe_oublie') }}">Mot de passe oublié ?</a>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-full btn-lg">Se connecter</button>
+                    </div>
+                </form>
+                <p class="form-footer">
+                    Pas encore de compte ? <a href="{{ url_for('auth.inscription') }}">S'inscrire</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

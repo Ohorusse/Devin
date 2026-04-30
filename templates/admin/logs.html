@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Logs de connexion – Admin{% endblock %}
+{% block content %}
+<div class="page">
+    <div class="mb-3">
+        <a href="{{ url_for('admin.index') }}" class="back-link" style="display:inline-flex;">← Retour au tableau de bord</a>
+        <h1 class="mt-1">Logs de connexion</h1>
+        <p class="text-muted text-sm">Historique des connexions et activités utilisateurs (200 dernières entrées)</p>
+    </div>
+
+    <div class="card">
+        <table>
+            <thead style="background:var(--bg);">
+                <tr>
+                    <th>Utilisateur</th>
+                    <th>Action</th>
+                    <th>Date & Heure</th>
+                    <th>Adresse IP</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for l in logs %}
+            <tr>
+                <td style="font-family:monospace;color:var(--primary);font-size:0.875rem;">
+                    {{ l.email or '–' }}
+                </td>
+                <td class="text-muted text-sm">{{ l.action }}</td>
+                <td class="text-muted text-sm">{{ l.timestamp.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                <td style="font-family:monospace;font-size:0.875rem;">{{ l.adresse_ip or '–' }}</td>
+                <td>
+                    <span style="
+                        padding: 0.2rem 0.6rem;
+                        border-radius: 4px;
+                        font-size: 0.8rem;
+                        font-weight: 500;
+                        background: {{ '#E8F5E9' if l.statut == 'Succès' else '#FFEBEE' }};
+                        color: {{ '#2E7D32' if l.statut == 'Succès' else '#C62828' }};
+                    ">{{ l.statut }}</span>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center text-muted" style="padding:2rem;">Aucun log enregistré.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

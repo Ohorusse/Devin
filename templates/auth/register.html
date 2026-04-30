@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Inscription – TicketSecure{% endblock %}
+{% block content %}
+<div class="centered">
+    <div style="width:100%;max-width:440px;">
+        <div class="card">
+            <div class="card-body-lg">
+                <h1 class="text-center mb-3">Inscription</h1>
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="prenom">Prénom</label>
+                        <input type="text" id="prenom" name="prenom" required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label for="nom">Nom</label>
+                        <input type="text" id="nom" name="nom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="votre@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="mot_de_passe">Mot de passe</label>
+                        <input type="password" id="mot_de_passe" name="mot_de_passe"
+                               placeholder="12 caractères minimum" minlength="12" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-full btn-lg">Créer mon compte</button>
+                    </div>
+                </form>
+                <p class="form-footer">
+                    Déjà un compte ? <a href="{{ url_for('auth.login') }}">Se connecter</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

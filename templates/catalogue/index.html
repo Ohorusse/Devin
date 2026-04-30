@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Événements – TicketSecure{% endblock %}
+{% block content %}
+<div class="page">
+    <div class="grid-3">
+        {% for s in spectacles %}
+        <div class="card">
+            <div class="event-card-img">
+                {% if s.illustration_url %}
+                    <img src="{{ s.illustration_url }}" alt="{{ s.titre }}">
+                {% else %}
+                    <img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&q=80" alt="{{ s.titre }}">
+                {% endif %}
+            </div>
+            <div class="event-card-body">
+                <h3>{{ s.titre }}</h3>
+                <p class="event-card-date">{{ s.date_heure.strftime('%d %B %Y à %H:%M') }}</p>
+                <p class="event-card-price">{{ '%.2f'|format(s.prix_unitaire) }} €</p>
+                <a href="{{ url_for('catalogue.detail', id=s.id) }}" class="btn btn-primary btn-full">Voir les détails</a>
+            </div>
+        </div>
+        {% else %}
+        <p>Aucun événement disponible pour le moment.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

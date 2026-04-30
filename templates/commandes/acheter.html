@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Achat – {{ spectacle.titre }}{% endblock %}
+{% block content %}
+<div class="centered">
+    <div style="width:100%;max-width:480px;">
+        <h1 class="text-center mb-3">Finaliser la commande</h1>
+        <div class="card">
+            <div class="card-body-lg">
+                <h2 class="mb-1">{{ spectacle.titre }}</h2>
+                <p class="text-sm mb-1">{{ spectacle.date_heure.strftime('%d %B %Y à %H:%M') }} – {{ spectacle.lieu }}</p>
+
+                <hr class="divider">
+
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="form-group">
+                        <label>Quantité <span class="text-muted text-sm">(max {{ max_tickets }})</span></label>
+                        <div class="qty-selector">
+                            <button type="button" class="qty-btn" onclick="changeQty(-1)">−</button>
+                            <span class="qty-value" id="qty-display">1</span>
+                            <button type="button" class="qty-btn" onclick="changeQty(1)">+</button>
+                            <input type="hidden" name="quantite" id="qty-input" value="1">
+                        </div>
+                    </div>
+
+                    <hr class="divider">
+
+                    <div class="summary-row mb-1">
+                        <span>Prix unitaire</span>
+                        <span>{{ '%.2f'|format(spectacle.prix_unitaire) }} €</span>
+                    </div>
+                    <div class="summary-total mb-3">
+                        <span class="total-label">Total</span>
+                        <span class="total-value" id="total-price">{{ '%.2f'|format(spectacle.prix_unitaire) }} €</span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full btn-lg">Confirmer la commande</button>
+                    <a href="{{ url_for('catalogue.detail', id=spectacle.id) }}" class="btn btn-secondary btn-full mt-1">Annuler</a>
+                </form>
+
+                <p class="text-center text-sm text-muted mt-2">Aucun paiement réel ne sera effectué (MVP)</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const prix = {{ spectacle.prix_unitaire|float }};
+const max = {{ max_tickets }};
+let qty = 1;
+
+function changeQty(delta) {
+    qty = Math.min(max, Math.max(1, qty + delta));
+    document.getElementById('qty-display').textContent = qty;
+    document.getElementById('qty-input').value = qty;
+    document.getElementById('total-price').textContent = (prix * qty).toFixed(2) + ' €';
+}
+</script>
+{% endblock %}

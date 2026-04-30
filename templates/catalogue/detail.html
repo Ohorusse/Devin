@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}{{ spectacle.titre }} – TicketSecure{% endblock %}
+{% block content %}
+
+<div class="back-bar">
+    <div class="back-bar-inner">
+        <a href="{{ url_for('catalogue.index') }}" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Retour aux événements
+        </a>
+    </div>
+</div>
+
+<div class="hero-img">
+    {% if spectacle.illustration_url %}
+        <img src="{{ spectacle.illustration_url }}" alt="{{ spectacle.titre }}">
+    {% else %}
+        <img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&q=80" alt="{{ spectacle.titre }}">
+    {% endif %}
+</div>
+
+<div class="page-md">
+    <h1 class="mb-2">{{ spectacle.titre }}</h1>
+    <p class="mb-1">{{ spectacle.date_heure.strftime('%d %B %Y à %H:%M') }} – {{ spectacle.lieu }}</p>
+    <p class="font-bold text-dark mb-3" style="color:var(--dark);">{{ '%.2f'|format(spectacle.prix_unitaire) }} € par ticket</p>
+    <p class="mb-4" style="line-height:1.7;">{{ spectacle.description }}</p>
+
+    <!-- Achat -->
+    {% if current_user.is_authenticated %}
+    <div class="card mb-4">
+        <div class="card-body-lg">
+            <form method="POST" action="{{ url_for('commandes.acheter', id_spectacle=spectacle.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label>Quantité <span class="text-muted text-sm">(max 4 tickets)</span></label>
+                    <div class="qty-selector">
+                        <button type="button" class="qty-btn" onclick="changeQty(-1)">−</button>
+                        <span class="qty-value" id="qty-display">1</span>
+                        <button type="button" class="qty-btn" onclick="changeQty(1)">+</button>
+                        <input type="hidden" name="quantite" id="qty-input" value="1">
+                    </div>
+                </div>
+                <hr class="divider">
+                <div class="flex-between mb-3">
+                    <span class="text-muted">Total</span>
+                    <span class="font-bold text-dark" id="total-price">{{ '%.2f'|format(spectacle.prix_unitaire) }} €</span>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full btn-lg">Acheter les tickets</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="card mb-4">
+        <div class="card-body-lg text-center">
+            <p class="mb-2">Connectez-vous pour acheter des tickets</p>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">Se connecter</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Avis -->
+    <h2 class="mt-4 mb-3">Avis ({{ avis|length }})</h2>
+
+    {% if current_user.is_authenticated %}
+    <div class="card mb-3">
+        <div class="card-body-lg">
+            <h3 class="mb-2">Laisser un avis</h3>
+            <form method="POST" action="{{ url_for('commandes.deposer_avis', id_spectacle=spectacle.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label>Note</label>
+                    <div class="stars" id="star-container">
+                        {% for i in range(1, 6) %}
+                        <span class="star" data-value="{{ i }}" onclick="setRating({{ i }})" style="cursor:pointer;">☆</span>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="note" id="note-input" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Commentaire</label>
+                    <textarea name="commentaire" rows="3" maxlength="500" placeholder="Partagez votre expérience..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">Envoyer</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% for a in avis %}
+    <div class="card mb-2">
+        <div class="card-body">
+            <div class="flex-between mb-1">
+                <span class="font-bold text-dark">{{ a.utilisateur.prenom }} {{ a.utilisateur.nom[0] }}.</span>
+                <span class="stars">{{ '★' * a.note }}{{ '☆' * (5 - a.note) }}</span>
+            </div>
+            <p style="line-height:1.6;">{{ a.commentaire }}</p>
+            <p class="text-sm text-muted mt-1">{{ a.date_avis.strftime('%d/%m/%Y') }}</p>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-muted">Aucun avis pour le moment.</p>
+    {% endfor %}
+</div>
+
+<script>
+const prix = {{ spectacle.prix_unitaire|float }};
+let qty = 1;
+
+function changeQty(delta) {
+    qty = Math.min(4, Math.max(1, qty + delta));
+    document.getElementById('qty-display').textContent = qty;
+    document.getElementById('qty-input').value = qty;
+    document.getElementById('total-price').textContent = (prix * qty).toFixed(2) + ' €';
+}
+
+function setRating(value) {
+    document.getElementById('note-input').value = value;
+    document.querySelectorAll('.star').forEach((s, i) => {
+        s.textContent = i < value ? '★' : '☆';
+    });
+}
+</script>
+{% endblock %}

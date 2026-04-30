@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Modération – Admin{% endblock %}
+{% block content %}
+<div class="page-md">
+    <h1 class="mb-3">Avis en attente ({{ avis_list|length }})</h1>
+    {% for a in avis_list %}
+    <div class="card mb-2">
+        <div class="card-body">
+            <div class="flex-between mb-1">
+                <span class="font-bold">{{ a.utilisateur.prenom }} {{ a.utilisateur.nom }}</span>
+                <span class="stars">{{ '★' * a.note }}{{ '☆' * (5 - a.note) }}</span>
+            </div>
+            <p class="text-sm text-muted mb-1">{{ a.spectacle.titre }}</p>
+            <p style="line-height:1.6;" class="mb-2">{{ a.commentaire }}</p>
+            <div class="flex gap-1">
+                <form method="POST" action="{{ url_for('admin.valider_avis', id=a.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-primary btn-sm">Valider</button>
+                </form>
+                <form method="POST" action="{{ url_for('admin.supprimer_avis', id=a.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center">
+            <p>Aucun avis en attente de modération.</p>
+        </div>
+    </div>
+    {% endfor %}
+    <div class="mt-2">
+        <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">← Retour au tableau de bord</a>
+    </div>
+</div>
+{% endblock %}
