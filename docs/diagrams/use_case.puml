@@ -1,78 +1,102 @@
-@startuml use_case_billetterie
-title Diagramme de Cas d'Utilisation – Système de Billetterie TicketSecure
+@startuml use_case
+title Diagramme de Cas d'Utilisation – TicketSecure
 
 left to right direction
 skinparam actorStyle awesome
 skinparam usecase {
-  BackgroundColor LightBlue
-  BorderColor DarkBlue
-  ArrowColor DarkBlue
+  BackgroundColor #EBF3FB
+  BorderColor #2D6CDF
+  ArrowColor #1B2A4A
+}
+skinparam actor {
+  BackgroundColor #FDFEFE
+  BorderColor #1B2A4A
 }
 
 actor "Visiteur" as V
 actor "Utilisateur\nauthentifié" as U
 actor "Administrateur" as A
+actor "Serveur SMTP" as SMTP <<system>>
 
-rectangle "TicketSecure – Système de billetterie" {
-  ' Visiteur
-  usecase "Consulter le catalogue\ndes spectacles" as UC1
-  usecase "Rechercher un spectacle" as UC2
-  usecase "Créer un compte" as UC3
-  usecase "Se connecter" as UC4
-  usecase "Récupérer son\nmot de passe" as UC5
+U -|> V
 
-  ' Utilisateur authentifié
-  usecase "Acheter des tickets\n(max 4 / spectacle)" as UC6
-  usecase "Consulter ses commandes" as UC7
-  usecase "Télécharger sa facture" as UC8
-  usecase "Déposer un avis\net une note" as UC9
-  usecase "Modifier son profil" as UC10
-  usecase "Se déconnecter" as UC11
+rectangle "TicketSecure" {
 
-  ' Admin
-  usecase "Gérer les événements\n(CRUD)" as UC12
-  usecase "Modérer les avis" as UC13
-  usecase "Consulter les logs\nde sécurité" as UC14
-  usecase "Gérer les utilisateurs" as UC15
+  package "Authentification" {
+    usecase "S'inscrire" as UC_INSCR
+    usecase "Vérifier son e-mail" as UC_VERIF
+    usecase "Se connecter" as UC_LOGIN
+    usecase "Se déconnecter" as UC_LOGOUT
+    usecase "Réinitialiser\nson mot de passe" as UC_RESET
+  }
+
+  package "Catalogue" {
+    usecase "Consulter le catalogue\ndes événements" as UC_CAT
+    usecase "Voir le détail\nd'un événement" as UC_DETAIL
+  }
+
+  package "Commandes" {
+    usecase "Acheter des tickets\n(max 4 / événement)" as UC_ACHAT
+    usecase "Consulter ses commandes" as UC_CMD
+    usecase "Voir sa facture" as UC_FACT
+    usecase "Déposer un avis\n(acheteurs uniquement)" as UC_AVIS
+  }
+
+  package "Administration" {
+    usecase "Créer un événement" as UC_CREER
+    usecase "Modifier un événement" as UC_MODIF
+    usecase "Désactiver un événement" as UC_DEACT
+    usecase "Gérer les utilisateurs\n(activer / désactiver)" as UC_USERS
+    usecase "Modérer les avis" as UC_MOD
+    usecase "Consulter les logs\nde connexion" as UC_LOGS
+    usecase "Voir le tableau\nde bord" as UC_DASH
+  }
 }
 
-V --> UC1
-V --> UC2
-V --> UC3
-V --> UC4
-V --> UC5
+' Visiteur
+V --> UC_INSCR
+V --> UC_LOGIN
+V --> UC_RESET
+V --> UC_CAT
+V --> UC_DETAIL
 
-U --> UC1
-U --> UC2
-U --> UC6
-U --> UC7
-U --> UC8
-U --> UC9
-U --> UC10
-U --> UC11
+' Utilisateur authentifié
+U --> UC_LOGOUT
+U --> UC_ACHAT
+U --> UC_CMD
+U --> UC_FACT
+U --> UC_AVIS
 
-A --> UC12
-A --> UC13
-A --> UC14
-A --> UC15
-A --> UC1
+' Admin
+A --> UC_DASH
+A --> UC_CREER
+A --> UC_MODIF
+A --> UC_DEACT
+A --> UC_USERS
+A --> UC_MOD
+A --> UC_LOGS
 
 ' Relations include / extend
-UC6 .> UC4 : <<include>>
-UC7 .> UC4 : <<include>>
-UC9 .> UC6 : <<extend>>\n(avoir acheté)
-UC8 .> UC7 : <<include>>
+UC_INSCR ..> UC_VERIF      : <<include>>
+UC_ACHAT ..> UC_LOGIN      : <<include>>
+UC_CMD   ..> UC_LOGIN      : <<include>>
+UC_AVIS  ..> UC_ACHAT      : <<extend>>\n(avoir acheté)
+UC_FACT  ..> UC_CMD        : <<include>>
+UC_MODIF ..> UC_CREER      : <<extend>>
 
-note right of UC6
-  Contrainte métier :
-  max 4 tickets par
-  spectacle et par compte
+' Système SMTP
+UC_INSCR --> SMTP          : envoie e-mail\nd'activation
+UC_RESET --> SMTP          : envoie lien\nde reset
+UC_ACHAT --> SMTP          : envoie confirmation\nde commande
+
+note bottom of UC_ACHAT
+  Verrouillage pessimiste (WITH FOR UPDATE)
+  pour éviter la survente concurrente
 end note
 
-note right of UC3
-  Vérification e-mail
-  obligatoire avant
-  activation du compte
+note bottom of UC_LOGIN
+  Verrouillage temporaire après
+  5 tentatives échouées (15 min)
 end note
 
 @enduml

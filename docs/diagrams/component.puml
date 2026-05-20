@@ -1,0 +1,151 @@
+@startuml component
+title Diagramme de Composants – TicketSecure
+
+skinparam component {
+  BackgroundColor #EBF3FB
+  BorderColor #2D6CDF
+  FontColor #1B2A4A
+}
+skinparam package {
+  BackgroundColor #F5F7FA
+  BorderColor #B0BEC5
+}
+skinparam database {
+  BackgroundColor #FFF8E1
+  BorderColor #F57F17
+}
+skinparam interface {
+  BackgroundColor #FDFEFE
+  BorderColor #1B2A4A
+}
+skinparam arrow {
+  Color #1B2A4A
+}
+
+' ─────────────────────────────────────────
+' Couche présentation
+' ─────────────────────────────────────────
+package "Couche Présentation" {
+  component "Templates Jinja2\n(HTML / CSS)" as TMPL {
+    component "base.html" as BASE
+    component "auth/*" as T_AUTH
+    component "catalogue/*" as T_CAT
+    component "commandes/*" as T_CMD
+    component "admin/*" as T_ADMIN
+    component "emails/*" as T_MAIL
+    component "errors/*" as T_ERR
+  }
+  component "Fichiers statiques\n(main.css, logo)" as STATIC
+}
+
+' ─────────────────────────────────────────
+' Couche applicative – Blueprints Flask
+' ─────────────────────────────────────────
+package "Couche Applicative (Flask Blueprints)" {
+
+  component "Blueprint auth\n/auth/*" as BP_AUTH {
+    component "inscription()" as F_INSCR
+    component "login()" as F_LOGIN
+    component "logout()" as F_LOGOUT
+    component "mot_de_passe_oublie()" as F_RESET
+    component "reinitialiser_mdp()" as F_REINIT
+    component "verifier_email()" as F_VERIF
+  }
+
+  component "Blueprint catalogue\n/" as BP_CAT {
+    component "index()" as F_CAT
+    component "detail()" as F_DETAIL
+  }
+
+  component "Blueprint commandes\n/commandes/*" as BP_CMD {
+    component "mes_commandes()" as F_CMDS
+    component "acheter()" as F_ACHAT
+    component "facture()" as F_FACT
+    component "deposer_avis()" as F_AVIS
+  }
+
+  component "Blueprint admin\n/admin/*" as BP_ADMIN {
+    component "nouveau / modifier\n/ supprimer spectacle" as F_SPEC
+    component "toggle_utilisateur()" as F_USR
+    component "valider / supprimer avis" as F_MOD
+    component "logs()" as F_LOGS
+  }
+}
+
+' ─────────────────────────────────────────
+' Extensions Flask (middleware)
+' ─────────────────────────────────────────
+package "Extensions Flask" {
+  component "Flask-Login\nsessions utilisateur" as EXT_LOGIN
+  component "Flask-WTF / CSRF\nprotection formulaires" as EXT_CSRF
+  component "Flask-Limiter\nrate limiting" as EXT_LIM
+  component "Flask-Mail\nenvoi e-mails" as EXT_MAIL
+  component "SQLAlchemy\nORM + migrations" as EXT_ORM
+}
+
+' ─────────────────────────────────────────
+' Utilitaires
+' ─────────────────────────────────────────
+package "Utilitaires" {
+  component "utils/mail.py\nenvoyer_verification()\nenvoyer_reset_mdp()\nenvoyer_confirmation_achat()" as UTILS_MAIL
+  component "models.py\nUtilisateur, Spectacle,\nCommande, Avis, LogConnexion" as MODELS
+}
+
+' ─────────────────────────────────────────
+' Stockage
+' ─────────────────────────────────────────
+database "Base de données\nSQLite (dev) / MySQL (prod)" as DB
+
+' ─────────────────────────────────────────
+' Services externes
+' ─────────────────────────────────────────
+package "Services externes" {
+  component "Serveur SMTP\n(Mailhog dev / SMTP école prod)" as SMTP
+}
+
+' ─────────────────────────────────────────
+' Interfaces exposées
+' ─────────────────────────────────────────
+interface "HTTP / HTTPS" as HTTP
+interface "SMTP TCP 25/587" as ISMTP
+
+' ─────────────────────────────────────────
+' Connexions
+' ─────────────────────────────────────────
+HTTP --> BP_AUTH
+HTTP --> BP_CAT
+HTTP --> BP_CMD
+HTTP --> BP_ADMIN
+
+BP_AUTH --> EXT_LOGIN
+BP_AUTH --> EXT_CSRF
+BP_AUTH --> EXT_LIM
+BP_AUTH --> UTILS_MAIL
+BP_AUTH --> MODELS
+
+BP_CAT  --> MODELS
+BP_CAT  --> EXT_LOGIN
+
+BP_CMD  --> MODELS
+BP_CMD  --> EXT_LOGIN
+BP_CMD  --> EXT_CSRF
+BP_CMD  --> UTILS_MAIL
+
+BP_ADMIN --> MODELS
+BP_ADMIN --> EXT_LOGIN
+BP_ADMIN --> EXT_CSRF
+
+MODELS --> EXT_ORM
+EXT_ORM --> DB
+
+UTILS_MAIL --> EXT_MAIL
+EXT_MAIL --> ISMTP
+ISMTP --> SMTP
+
+BP_AUTH  --> TMPL
+BP_CAT   --> TMPL
+BP_CMD   --> TMPL
+BP_ADMIN --> TMPL
+TMPL --> STATIC
+
+@enduml

@@ -24,3 +24,7 @@ instance/
 # OS
 .DS_Store
 Thumbs.db
+
+# PlantUML
+plantuml.jar
+*.zip

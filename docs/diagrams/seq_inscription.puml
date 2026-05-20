@@ -1,0 +1,93 @@
+@startuml seq_inscription
+title Diagramme de Séquence – Inscription et vérification e-mail
+
+skinparam sequence {
+  ArrowColor #1B2A4A
+  ActorBorderColor #2D6CDF
+  LifeLineBorderColor #2D6CDF
+  ParticipantBackgroundColor #EBF3FB
+  ParticipantBorderColor #2D6CDF
+  NoteBackgroundColor #FFFDE7
+  NoteBorderColor #F57F17
+  BoxBackgroundColor #F5F7FA
+  BoxBorderColor #B0BEC5
+}
+
+actor "Visiteur" as V
+participant "Navigateur" as B
+participant "Blueprint auth\n(/auth/inscription)" as AUTH
+participant "Flask-Limiter" as LIM
+participant "Utilisateur\n(models.py)" as MODEL
+participant "Base de données" as DB
+participant "utils/mail.py" as MAIL
+participant "Serveur SMTP\n(Mailhog / école)" as SMTP
+
+== Affichage du formulaire ==
+
+V -> B : GET /auth/inscription
+B -> AUTH : requête HTTP GET
+AUTH -> B : render register.html (200)
+B -> V : formulaire d'inscription
+
+== Soumission ==
+
+V -> B : remplit prénom, nom, e-mail,\nmot de passe + confirmation
+B -> AUTH : POST /auth/inscription\n{ csrf_token, prenom, nom,\nemail, mot_de_passe }
+
+AUTH -> LIM : vérifier limite (10/heure)
+alt quota dépassé
+  LIM -> B : 429 Too Many Requests
+  B -> V : message d'erreur rate limit
+else quota ok
+  LIM -> AUTH : ok
+
+  AUTH -> DB : SELECT * FROM utilisateurs WHERE email = ?
+  alt e-mail déjà utilisé
+    DB -> AUTH : utilisateur trouvé
+    AUTH -> B : flash info (réponse générique)\nredirect /auth/inscription
+    note right of AUTH
+      Réponse générique pour ne pas
+      confirmer l'existence du compte
+      (protection énumération)
+    end note
+    B -> V : "Si cette adresse est valide,\nun e-mail vous sera envoyé."
+  else e-mail disponible
+    DB -> AUTH : aucun résultat
+
+    AUTH -> MODEL : Utilisateur(email, nom, prenom,\nest_actif=False)
+    MODEL -> MODEL : set_password(mot_de_passe)\n→ bcrypt hash (12 rounds)
+    MODEL -> MODEL : generer_token_verification()\n→ secrets.token_urlsafe(32)
+    AUTH -> DB : INSERT utilisateur + LogConnexion
+    DB -> AUTH : commit OK
+
+    AUTH -> MAIL : envoyer_verification(utilisateur)
+    MAIL -> SMTP : Message SMTP\nsujet: "Activez votre compte"\ndestinataire: email utilisateur
+    alt SMTP disponible
+      SMTP -> MAIL : 250 OK
+    else SMTP indisponible
+      SMTP -> MAIL : exception
+      MAIL -> MAIL : log erreur (stderr Flask)\n→ ne bloque pas l'inscription
+    end
+
+    AUTH -> B : flash success\nredirect /auth/connexion
+    B -> V : "Vérifiez votre e-mail pour\nactiver votre compte."
+  end
+end
+
+== Activation du compte ==
+
+V -> B : clique le lien reçu par e-mail\nGET /auth/verifier/<token>
+B -> AUTH : requête HTTP GET
+AUTH -> DB : SELECT * FROM utilisateurs\nWHERE token_verification = token
+alt token introuvable
+  DB -> AUTH : aucun résultat
+  AUTH -> B : 404
+else token valide
+  DB -> AUTH : utilisateur trouvé
+  AUTH -> DB : UPDATE utilisateur\nSET est_actif=True,\ntoken_verification=NULL
+  DB -> AUTH : commit OK
+  AUTH -> B : flash success\nredirect /auth/connexion
+  B -> V : "Compte activé.\nVous pouvez vous connecter."
+end
+
+@enduml

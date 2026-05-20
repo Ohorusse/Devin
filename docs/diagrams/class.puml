@@ -1,0 +1,156 @@
+@startuml class
+title Diagramme de Classes – TicketSecure (models.py)
+
+skinparam class {
+  BackgroundColor #EBF3FB
+  BorderColor #2D6CDF
+  ArrowColor #1B2A4A
+  HeaderBackgroundColor #2D6CDF
+  HeaderFontColor #FFFFFF
+}
+skinparam stereotypeCBackgroundColor #F5F7FA
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F57F17
+}
+
+' ─────────────────────────────────────────
+' Utilisateur
+' ─────────────────────────────────────────
+class Utilisateur {
+  + id : Integer <<PK>>
+  + email : String(255) <<unique, index>>
+  - mot_de_passe_hash : String(255)
+  + nom : String(100)
+  + prenom : String(100)
+  + date_naissance : Date
+  + telephone : String(20)
+  + adresse_rue : String(255)
+  + adresse_code_postal : String(10)
+  + adresse_ville : String(100)
+  + adresse_pays : String(100)
+  + date_inscription : DateTime
+  + derniere_connexion : DateTime
+  + est_actif : Boolean
+  + role : String(20)
+  + tentatives_connexion : Integer
+  + verrouille_jusqu_a : DateTime
+  ~ token_reset_mdp : String(255)
+  ~ expiration_token_reset : DateTime
+  ~ token_verification : String(255)
+  --
+  + set_password(password: str) : void
+  + check_password(password: str) : bool
+  + generer_token_reset(expiry_minutes: int) : str
+  + generer_token_verification() : str
+  + est_verrouille() : bool
+  + est_admin : bool <<property>>
+}
+
+note right of Utilisateur
+  est_actif=False jusqu'à
+  validation de l'e-mail.
+  Verrouillage après
+  5 tentatives (15 min).
+  Rôles : "utilisateur" | "administrateur"
+end note
+
+' ─────────────────────────────────────────
+' Spectacle
+' ─────────────────────────────────────────
+class Spectacle {
+  + id : Integer <<PK>>
+  + titre : String(255)
+  + description : Text
+  + date_heure : DateTime
+  + lieu : String(255)
+  + prix_unitaire : Numeric(10,2)
+  + capacite_totale : Integer
+  + places_restantes : Integer
+  + illustration_url : String(500)
+  + categorie : String(100)
+  + est_actif : Boolean
+  --
+  + note_moyenne() : float | None
+}
+
+note right of Spectacle
+  CHECK : places_restantes >= 0
+  note_moyenne() agrège les avis
+  validés (est_valide=True).
+end note
+
+' ─────────────────────────────────────────
+' Commande
+' ─────────────────────────────────────────
+class Commande {
+  + id : Integer <<PK>>
+  + id_utilisateur : Integer <<FK>>
+  + id_spectacle : Integer <<FK>>
+  + quantite : Integer
+  + montant_total : Numeric(10,2)
+  + date_commande : DateTime
+  + statut : String(20)
+  + numero_facture : String(50) <<unique>>
+  + code_qr_ticket : String(255)
+}
+
+note right of Commande
+  CHECK : quantite BETWEEN 1 AND 4
+  numero_facture : FAC-XXXXXXXXXX
+  code_qr_ticket : UUID hex
+end note
+
+' ─────────────────────────────────────────
+' Avis
+' ─────────────────────────────────────────
+class Avis {
+  + id : Integer <<PK>>
+  + id_utilisateur : Integer <<FK>>
+  + id_spectacle : Integer <<FK>>
+  + note : Integer
+  + commentaire : Text
+  + date_avis : DateTime
+  + est_valide : Boolean
+}
+
+note right of Avis
+  CHECK : note BETWEEN 1 AND 5
+  est_valide=False par défaut
+  → validation manuelle admin.
+end note
+
+' ─────────────────────────────────────────
+' LogConnexion
+' ─────────────────────────────────────────
+class LogConnexion {
+  + id : Integer <<PK>>
+  + id_utilisateur : Integer <<FK, nullable>>
+  + email : String(255)
+  + action : String(50)
+  + adresse_ip : String(45)
+  + statut : String(20)
+  + timestamp : DateTime
+}
+
+note right of LogConnexion
+  action : "Inscription" | "Connexion" |
+           "Déconnexion"
+  statut : "Succès" | "Échec" |
+           "Verrouillé"
+  id_utilisateur nullable : permet de
+  journaliser les tentatives sur des
+  comptes inexistants.
+end note
+
+' ─────────────────────────────────────────
+' Relations
+' ─────────────────────────────────────────
+Utilisateur "1" o-- "0..*" Commande      : passe >
+Utilisateur "1" o-- "0..*" Avis          : rédige >
+Utilisateur "1" o-- "0..*" LogConnexion  : génère >
+
+Spectacle   "1" o-- "0..*" Commande      : concerne <
+Spectacle   "1" o-- "0..*" Avis          : reçoit <
+
+@enduml

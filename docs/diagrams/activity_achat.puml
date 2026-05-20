@@ -1,77 +1,92 @@
-@startuml activity_achat_ticket
-title Diagramme d'Activité – Achat de ticket(s) de spectacle
+@startuml activity_achat
+title Diagramme d'Activité – Achat de tickets
 
-skinparam backgroundColor White
 skinparam activity {
-  BackgroundColor LightBlue
-  BorderColor DarkBlue
-  ArrowColor DarkBlue
-  StartColor DarkBlue
-  EndColor DarkRed
+  BackgroundColor #EBF3FB
+  BorderColor #2D6CDF
+  ArrowColor #1B2A4A
+  StartColor #2D6CDF
+  EndColor #1B2A4A
+  DiamondBackgroundColor #FFF8E1
+  DiamondBorderColor #F57F17
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F57F17
 }
 
 |Utilisateur|
 start
-:Accéder à la plateforme;
-:Se connecter (e-mail + MDP);
+:Consulte la page détail\nd'un événement;
+
+if (Connecté ?) then (non)
+  :Voit bouton "Se connecter";
+  stop
+else (oui)
+endif
+
+if (places_restantes == 0 ?) then (oui)
+  :Voit message "Événement complet";
+  stop
+else (non)
+endif
+
+:Choisit une quantité (1 à 4)\net soumet le formulaire;
 
 |Système|
-:Vérifier les identifiants\n(bcrypt + session Flask);
-
-if (Identifiants valides ?) then (oui)
-  :Créer session sécurisée\n(token CSRF, HttpOnly cookie);
+:Vérifier CSRF token;
+:Valider quantite ∈ [1, 4];
+if (quantité invalide ?) then (oui)
+  :Flash "Quantité invalide";
   |Utilisateur|
-  :Parcourir le catalogue;
-  :Sélectionner un spectacle;
-  :Choisir la quantité\n(1 à 4 tickets);
-
-  |Système|
-  :Vérifier la disponibilité\n(places restantes >= quantité);
-
-  if (Places disponibles ?) then (oui)
-    :Calculer le montant total;
-    |Utilisateur|
-    :Confirmer la commande;
-
-    |Système|
-    :Vérifier le quota utilisateur\n(total acheté + quantité <= 4);
-
-    if (Quota respecté ?) then (oui)
-      :Enregistrer la commande\n(INSERT en transaction SQL);
-      :Décrémenter places_restantes;
-      :Générer numéro de facture\n(UUID + date);
-      :Générer QR code ticket;
-      :Envoyer e-mail de confirmation\n+ lien facture PDF;
-
-      |Utilisateur|
-      :Consulter commande + facture;
-      stop
-    else (non – quota dépassé)
-      |Système|
-      :Afficher erreur :\n"Maximum 4 tickets par spectacle";
-      |Utilisateur|
-      :Modifier la quantité;
-      stop
-    endif
-  else (non – complet)
-    |Système|
-    :Afficher :\n"Spectacle complet";
-    |Utilisateur|
-    :Consulter d'autres spectacles;
-    stop
-  endif
-else (non – identifiants incorrects)
-  |Système|
-  :Incrémenter compteur échecs;
-  if (>= 5 tentatives ?) then (oui)
-    :Verrouiller compte 15 min;
-    :Alerter l'administrateur;
-  else (non)
-    :Afficher message d'erreur générique;
-  endif
-  |Utilisateur|
-  :Réessayer ou récupérer MDP;
+  :Corrige la quantité;
   stop
+else (non)
 endif
+
+:Verrouiller la ligne spectacle\n(SELECT … FOR UPDATE);
+note right
+  Verrouillage pessimiste : empêche
+  deux achats simultanés de passer
+  quand une seule place reste.
+end note
+
+:Relire places_restantes (valeur fraîche);
+if (places_restantes < quantite ?) then (oui)
+  :ROLLBACK / libérer verrou;
+  :Flash "Pas assez de places";
+  |Utilisateur|
+  :Voit message d'erreur;
+  stop
+else (non)
+endif
+
+:Calculer quota déjà acheté\n(SUM commandes user/spectacle);
+if (quota + quantite > 4 ?) then (oui)
+  :ROLLBACK / libérer verrou;
+  :Flash "Quota de 4 tickets déjà atteint";
+  |Utilisateur|
+  :Voit message d'erreur;
+  stop
+else (non)
+endif
+
+:Créer Commande\n(montant, numero_facture=FAC-XXXXX,\ncode_qr_ticket=UUID);
+:UPDATE spectacle\nSET places_restantes -= quantite;
+:COMMIT (verrou libéré);
+
+:Appeler envoyer_confirmation_achat(commande);
+if (SMTP disponible ?) then (non)
+  :Logger l'erreur SMTP\n(commande reste valide);
+else (oui)
+  :E-mail de confirmation envoyé;
+endif
+
+:Flash "Commande confirmée !";
+:Rediriger vers /commandes/facture/<id>;
+
+|Utilisateur|
+:Consulte la facture\n(récapitulatif + numéro de commande);
+stop
 
 @enduml

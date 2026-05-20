@@ -1,0 +1,103 @@
+@startuml seq_achat
+title Diagramme de Séquence – Achat de tickets (avec verrouillage pessimiste)
+
+skinparam sequence {
+  ArrowColor #1B2A4A
+  ActorBorderColor #2D6CDF
+  LifeLineBorderColor #2D6CDF
+  ParticipantBackgroundColor #EBF3FB
+  ParticipantBorderColor #2D6CDF
+  NoteBackgroundColor #FFFDE7
+  NoteBorderColor #F57F17
+  BoxBackgroundColor #F5F7FA
+  BoxBorderColor #B0BEC5
+}
+
+actor "Utilisateur\nauthentifié" as U
+participant "Navigateur" as B
+participant "Blueprint catalogue\n(/)" as CAT
+participant "Blueprint commandes\n(/commandes/*)" as CMD
+participant "Base de données\n(SQLite / MySQL)" as DB
+participant "utils/mail.py" as MAIL
+participant "Serveur SMTP" as SMTP
+
+== Consultation de l'événement ==
+
+U -> B : GET /spectacle/<id>
+B -> CAT : requête HTTP GET
+CAT -> DB : SELECT spectacle WHERE id=? AND est_actif=True
+DB -> CAT : spectacle + avis validés
+CAT -> B : render detail.html\n(formulaire d'achat si places > 0)
+B -> U : page détail avec\nsélecteur de quantité
+
+== Soumission du formulaire d'achat ==
+
+U -> B : choisit quantité (1-4)\net clique "Acheter les tickets"
+B -> CMD : POST /commandes/acheter/<id>\n{ csrf_token, quantite }
+
+CMD -> CMD : valider quantite ∈ [1, MAX_TICKETS=4]
+alt quantité invalide
+  CMD -> B : flash danger + redirect
+  B -> U : "Quantité invalide."
+else quantité valide
+
+  ' ─── Verrouillage pessimiste ───
+  CMD -> DB : SELECT spectacle WHERE id=?\nFOR UPDATE
+  note right of DB
+    WITH FOR UPDATE verrouille la ligne
+    jusqu'au COMMIT. Deux achats simultanés
+    de la dernière place sont sérialisés :
+    le second verra places_restantes=0.
+  end note
+  DB -> CMD : spectacle verrouillé
+
+  alt places_restantes < quantite
+    CMD -> DB : ROLLBACK (libère le verrou)
+    CMD -> B : flash danger + redirect détail
+    B -> U : "Pas assez de places disponibles."
+
+  else places suffisantes
+
+    ' ─── Vérification quota utilisateur ───
+    CMD -> DB : SELECT SUM(quantite) FROM commandes\nWHERE id_utilisateur=? AND id_spectacle=?
+    DB -> CMD : deja_achetes (entier)
+
+    alt deja_achetes + quantite > MAX_TICKETS
+      CMD -> DB : ROLLBACK
+      CMD -> B : flash danger + redirect
+      B -> U : "Quota de 4 tickets déjà atteint\npour cet événement."
+
+    else quota ok
+
+      ' ─── Création de la commande ───
+      CMD -> DB : INSERT commande\n{ id_utilisateur, id_spectacle, quantite,\nmontant_total, numero_facture=FAC-XXXXX,\ncode_qr_ticket=UUID }
+      CMD -> DB : UPDATE spectacle\nSET places_restantes -= quantite
+      CMD -> DB : COMMIT (libère le verrou)
+      DB -> CMD : OK
+
+      ' ─── Envoi e-mail de confirmation ───
+      CMD -> MAIL : envoyer_confirmation_achat(commande)
+      MAIL -> SMTP : Message SMTP\n(récapitulatif commande + lien facture)
+      alt SMTP ok
+        SMTP -> MAIL : 250 OK
+      else SMTP indisponible
+        SMTP -> MAIL : exception
+        MAIL -> MAIL : log erreur serveur\n→ ne bloque pas la commande
+      end
+
+      CMD -> B : flash success\nredirect /commandes/facture/<id>
+      B -> U : "Commande confirmée !\nUn e-mail de confirmation\nvous a été envoyé."
+    end
+  end
+end
+
+== Consultation de la facture ==
+
+U -> B : GET /commandes/facture/<id>
+B -> CMD : requête HTTP GET
+CMD -> DB : SELECT commande JOIN spectacle JOIN utilisateur\nWHERE id=? AND id_utilisateur=current_user
+DB -> CMD : commande complète
+CMD -> B : render facture.html
+B -> U : récapitulatif + numéro de facture
+
+@enduml

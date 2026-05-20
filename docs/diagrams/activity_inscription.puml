@@ -1,70 +1,83 @@
 @startuml activity_inscription
-title Diagramme d'Activité – Création de compte & Vérification e-mail
+title Diagramme d'Activité – Inscription et activation du compte
 
-skinparam backgroundColor White
 skinparam activity {
-  BackgroundColor LightCyan
-  BorderColor DarkBlue
-  ArrowColor DarkBlue
+  BackgroundColor #EBF3FB
+  BorderColor #2D6CDF
+  ArrowColor #1B2A4A
+  StartColor #2D6CDF
+  EndColor #1B2A4A
+  DiamondBackgroundColor #FFF8E1
+  DiamondBorderColor #F57F17
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #F57F17
 }
 
 |Visiteur|
 start
-:Accéder au formulaire\nd'inscription;
-:Saisir : nom, prénom, e-mail,\nmot de passe, adresse facturation;
+:Accède au formulaire d'inscription;
+:Remplit prénom, nom, e-mail,\nmot de passe + confirmation;
+:Soumet le formulaire;
 
 |Système|
-:Valider le format des champs\n(côté serveur);
-
-if (Données valides ?) then (oui)
-  :Vérifier unicité de l'e-mail\n(SELECT en BDD);
-
-  if (E-mail déjà utilisé ?) then (non)
-    :Hacher le mot de passe\n(bcrypt, coût = 12);
-    :Vérifier robustesse MDP\n(longueur >= 12, complexité);
-
-    if (MDP robuste ?) then (oui)
-      :Créer enregistrement utilisateur\n(est_actif = FALSE);
-      :Générer token de vérification\n(secrets.token_urlsafe, 1h);
-      :Envoyer e-mail de confirmation\navec lien signé;
-
-      |Visiteur|
-      :Recevoir l'e-mail;
-      :Cliquer sur le lien de vérification;
-
-      |Système|
-      :Vérifier token (valide + non expiré);
-
-      if (Token valide ?) then (oui)
-        :Activer le compte\n(est_actif = TRUE);
-        :Invalider le token;
-        :Rediriger vers la page de connexion;
-
-        |Visiteur|
-        :Se connecter;
-        stop
-      else (non – expiré ou invalide)
-        :Afficher erreur :\n"Lien invalide ou expiré";
-        :Proposer de renvoyer un e-mail;
-        stop
-      endif
-    else (non – trop faible)
-      |Système|
-      :Afficher les règles de complexité;
-      |Visiteur|
-      :Corriger le mot de passe;
-      stop
-    endif
-  else (oui – déjà utilisé)
-    |Système|
-    :Afficher message générique\n(ne pas confirmer l'existence du compte);
-    stop
-  endif
-else (non – données invalides)
-  :Afficher les erreurs de validation;
-  |Visiteur|
-  :Corriger les champs;
+:Vérifier le rate limit\n(10 inscriptions / heure / IP);
+if (limite dépassée ?) then (oui)
+  :Retourner erreur 429;
   stop
+else (non)
 endif
+
+:Normaliser l'e-mail (lowercase, strip);
+:Rechercher l'e-mail en base;
+if (e-mail déjà enregistré ?) then (oui)
+  :Retourner réponse générique\n(sans confirmer l'existence);
+  |Visiteur|
+  :Voit message info neutre;
+  stop
+else (non)
+endif
+
+:Créer Utilisateur\n(est_actif = False);
+note right
+  Le compte est inactif
+  jusqu'à la vérification e-mail.
+end note
+:Hacher le mot de passe\n(bcrypt, 12 rounds);
+:Générer token_verification\n(secrets.token_urlsafe(32));
+:Enregistrer en base (INSERT);
+:Journaliser l'inscription\n(LogConnexion "Inscription / Succès");
+:COMMIT;
+:Envoyer e-mail d'activation\n(lien /auth/verifier/<token>);
+
+if (SMTP disponible ?) then (non)
+  :Logger l'erreur SMTP\n(pas de blocage utilisateur);
+else (oui)
+endif
+
+:Flash "Vérifiez votre e-mail";
+:Rediriger vers /auth/connexion;
+
+|Visiteur|
+:Reçoit l'e-mail d'activation;
+:Clique le lien de confirmation;
+
+|Système|
+:Rechercher l'utilisateur\npar token_verification;
+if (token valide ?) then (non)
+  :Retourner 404;
+  stop
+else (oui)
+endif
+:Activer le compte\n(est_actif = True);
+:Effacer token_verification;
+:COMMIT;
+:Flash "Compte activé";
+:Rediriger vers /auth/connexion;
+
+|Visiteur|
+:Peut se connecter;
+stop
 
 @enduml

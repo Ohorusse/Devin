@@ -1,0 +1,107 @@
+@startuml seq_reset_mdp
+title Diagramme de Séquence – Réinitialisation de mot de passe
+
+skinparam sequence {
+  ArrowColor #1B2A4A
+  ActorBorderColor #2D6CDF
+  LifeLineBorderColor #2D6CDF
+  ParticipantBackgroundColor #EBF3FB
+  ParticipantBorderColor #2D6CDF
+  NoteBackgroundColor #FFFDE7
+  NoteBorderColor #F57F17
+  BoxBackgroundColor #F5F7FA
+  BoxBorderColor #B0BEC5
+}
+
+actor "Utilisateur" as U
+participant "Navigateur" as B
+participant "Blueprint auth" as AUTH
+participant "Flask-Limiter" as LIM
+participant "Base de données" as DB
+participant "utils/mail.py" as MAIL
+participant "Serveur SMTP" as SMTP
+
+== Demande de réinitialisation ==
+
+U -> B : clique "Mot de passe oublié ?"
+B -> AUTH : GET /auth/mot-de-passe-oublie
+AUTH -> B : render forgot_password.html
+B -> U : formulaire (champ e-mail)
+
+U -> B : saisit son adresse e-mail
+B -> AUTH : POST /auth/mot-de-passe-oublie\n{ csrf_token, email }
+
+AUTH -> LIM : vérifier limite (5/heure)
+alt quota dépassé
+  LIM -> B : 429 Too Many Requests
+else quota ok
+  LIM -> AUTH : ok
+
+  AUTH -> DB : SELECT * FROM utilisateurs\nWHERE email = ? AND est_actif = True
+  note right of AUTH
+    Réponse identique que le compte
+    existe ou non → protection
+    contre l'énumération d'e-mails.
+  end note
+
+  alt utilisateur actif trouvé
+    DB -> AUTH : utilisateur
+    AUTH -> AUTH : generer_token_reset(expiry=30min)\n→ token = secrets.token_urlsafe(32)\n→ expiration = now + 30min
+    AUTH -> DB : UPDATE utilisateur\nSET token_reset_mdp, expiration_token_reset
+    DB -> AUTH : commit OK
+    AUTH -> MAIL : envoyer_reset_mdp(utilisateur)
+    MAIL -> SMTP : Message SMTP\n(lien /auth/reinitialiser/<token>)
+    SMTP -> MAIL : 250 OK
+  else utilisateur introuvable ou inactif
+    DB -> AUTH : aucun résultat
+    note right of AUTH
+      Aucune action — même flux
+      de réponse que si trouvé.
+    end note
+  end
+
+  AUTH -> B : flash info\nredirect /auth/connexion
+  B -> U : "Si ce compte existe, un lien\na été envoyé."
+end
+
+== Utilisation du lien de reset ==
+
+U -> B : clique le lien dans l'e-mail\nGET /auth/reinitialiser/<token>
+B -> AUTH : requête HTTP GET
+AUTH -> DB : SELECT * FROM utilisateurs\nWHERE token_reset_mdp = token
+
+alt token introuvable
+  DB -> AUTH : aucun résultat
+  AUTH -> B : 404
+
+else token trouvé
+  DB -> AUTH : utilisateur
+  AUTH -> AUTH : vérifier expiration_token_reset < now()
+
+  alt token expiré (> 30 min)
+    AUTH -> B : flash danger\nredirect /auth/mot-de-passe-oublie
+    B -> U : "Ce lien a expiré.\nFaites une nouvelle demande."
+
+  else token valide
+    AUTH -> B : render reset_password.html
+    B -> U : formulaire (nouveau mot de passe\n+ confirmation)
+
+    == Soumission du nouveau mot de passe ==
+
+    U -> B : saisit nouveau mot de passe\net confirmation (validation JS client)
+    B -> AUTH : POST /auth/reinitialiser/<token>\n{ csrf_token, mot_de_passe }
+
+    AUTH -> AUTH : set_password(nouveau_mdp)\n→ bcrypt hash (12 rounds)
+    AUTH -> DB : UPDATE utilisateur\nSET mot_de_passe_hash = hash,\ntoken_reset_mdp = NULL,\nexpiration_token_reset = NULL
+    note right of DB
+      Invalidation du token après usage :
+      un lien de reset ne peut
+      servir qu'une seule fois.
+    end note
+    DB -> AUTH : commit OK
+    AUTH -> B : flash success\nredirect /auth/connexion
+    B -> U : "Mot de passe mis à jour.\nVous pouvez vous connecter."
+  end
+end
+
+@enduml

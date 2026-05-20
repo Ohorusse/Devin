@@ -1,0 +1,89 @@
+@startuml seq_connexion
+title Diagramme de Séquence – Connexion sécurisée
+
+skinparam sequence {
+  ArrowColor #1B2A4A
+  ActorBorderColor #2D6CDF
+  LifeLineBorderColor #2D6CDF
+  ParticipantBackgroundColor #EBF3FB
+  ParticipantBorderColor #2D6CDF
+  NoteBackgroundColor #FFFDE7
+  NoteBorderColor #F57F17
+  BoxBackgroundColor #F5F7FA
+  BoxBorderColor #B0BEC5
+}
+
+actor "Utilisateur" as U
+participant "Navigateur" as B
+participant "Blueprint auth\n(/auth/connexion)" as AUTH
+participant "Flask-Limiter" as LIM
+participant "Base de données" as DB
+participant "Flask-Login" as LOGIN
+
+== Affichage du formulaire ==
+
+U -> B : GET /auth/connexion
+B -> AUTH : requête HTTP GET
+AUTH -> B : render login.html (200)
+B -> U : formulaire de connexion
+
+== Soumission ==
+
+U -> B : saisit e-mail + mot de passe
+B -> AUTH : POST /auth/connexion\n{ csrf_token, email, mot_de_passe }
+
+AUTH -> LIM : vérifier limite (20/minute)
+alt quota dépassé
+  LIM -> B : 429 Too Many Requests
+  B -> U : message d'erreur rate limit
+else quota ok
+  LIM -> AUTH : ok
+
+  AUTH -> DB : SELECT * FROM utilisateurs\nWHERE email = ?
+  DB -> AUTH : utilisateur (ou None)
+
+  alt compte verrouillé (verrouille_jusqu_a > now)
+    AUTH -> DB : INSERT LogConnexion\n(action="Connexion", statut="Verrouillé")
+    AUTH -> B : flash danger + render login.html
+    B -> U : "Compte temporairement verrouillé.\nRéessayez dans quelques minutes."
+
+  else mot de passe correct (bcrypt.checkpw)
+    AUTH -> AUTH : check_password(mot_de_passe)
+
+    alt compte non activé (est_actif=False)
+      AUTH -> B : flash warning + render login.html
+      B -> U : "Compte non activé.\nVérifiez votre boîte e-mail."
+    else compte actif
+      AUTH -> DB : UPDATE utilisateur\nSET tentatives_connexion=0,\nderniere_connexion=now
+      AUTH -> DB : INSERT LogConnexion\n(statut="Succès")
+      DB -> AUTH : commit OK
+      AUTH -> LOGIN : login_user(utilisateur)
+      LOGIN -> B : SET SESSION cookie\n(HttpOnly, SameSite=Strict)
+      AUTH -> B : redirect /  (ou next_page)
+      B -> U : accès au catalogue
+    end
+
+  else mot de passe incorrect (ou utilisateur inexistant)
+    opt utilisateur existe
+      AUTH -> DB : UPDATE utilisateur\nSET tentatives_connexion += 1
+      note right of AUTH
+        Le compteur n'est incrémenté que
+        si l'utilisateur existe pour éviter
+        de révéler les comptes enregistrés.
+      end note
+
+      alt tentatives >= MAX_TENTATIVES (5)
+        AUTH -> DB : UPDATE utilisateur\nSET verrouille_jusqu_a = now + 15min
+        AUTH -> B : flash danger
+        B -> U : "Trop de tentatives.\nCompte verrouillé 15 minutes."
+      end
+    end
+
+    AUTH -> DB : INSERT LogConnexion (statut="Échec")
+    DB -> AUTH : commit OK
+    AUTH -> B : flash danger + render login.html
+    B -> U : "Identifiants incorrects."
+  end
+end
+
+@enduml

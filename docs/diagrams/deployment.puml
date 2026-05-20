@@ -1,0 +1,106 @@
+@startuml deployment
+title Diagramme de Déploiement – TicketSecure
+
+skinparam node {
+  BackgroundColor #EBF3FB
+  BorderColor #2D6CDF
+}
+skinparam component {
+  BackgroundColor #FDFEFE
+  BorderColor #1B2A4A
+}
+skinparam database {
+  BackgroundColor #FFF8E1
+  BorderColor #F57F17
+}
+skinparam arrow {
+  Color #1B2A4A
+}
+
+' ─────────────────────────────────────────
+' Poste client
+' ─────────────────────────────────────────
+node "Poste utilisateur / Admin" as CLIENT {
+  component "Navigateur web\n(Chrome, Firefox, Safari…)" as BROWSER
+}
+
+' ─────────────────────────────────────────
+' Serveur école (production)
+' ─────────────────────────────────────────
+node "Serveur INSA (Linux)" as SERVER {
+
+  component "Gunicorn / WSGI\n(wsgi.py)" as WSGI
+
+  node "Application Flask" as FLASK_APP {
+    component "Blueprint auth\n(/auth/*)" as BP_AUTH
+    component "Blueprint catalogue\n(/)" as BP_CAT
+    component "Blueprint commandes\n(/commandes/*)" as BP_CMD
+    component "Blueprint admin\n(/admin/*)" as BP_ADMIN
+  }
+
+  component "Flask-Login\n(sessions)" as FL_LOGIN
+  component "Flask-WTF\n(CSRF)" as FL_WTF
+  component "Flask-Limiter\n(rate limiting)" as FL_LIM
+  component "Flask-Mail\n(envoi e-mails)" as FL_MAIL
+
+  database "MySQL\n(production)" as DB_MYSQL {
+    collections "utilisateurs"
+    collections "spectacles"
+    collections "commandes"
+    collections "avis"
+    collections "logs_connexion"
+  }
+
+  folder "Fichiers statiques\n(CSS, images)" as STATIC
+}
+
+' ─────────────────────────────────────────
+' Serveur SMTP
+' ─────────────────────────────────────────
+node "Serveur SMTP\n(école ou externe)" as SMTP_SERVER {
+  component "Service SMTP\n(port 25 / 587)" as SMTP
+}
+
+' ─────────────────────────────────────────
+' Environnement développement (local)
+' ─────────────────────────────────────────
+node "Poste développeur (local)" as DEV {
+  component "Flask dev server\n(python run.py)" as DEV_FLASK
+  component "Mailhog\n(SMTP factice, port 1025)\nUI port 8025" as MAILHOG
+  database "SQLite\n(instance/ticketsecure.db)" as DB_SQLITE
+}
+
+' ─────────────────────────────────────────
+' Connexions – Production
+' ─────────────────────────────────────────
+BROWSER  -down-> WSGI        : HTTPS :443\n(HTTP/1.1)
+WSGI     -down-> FLASK_APP   : WSGI
+FLASK_APP -right-> FL_LOGIN
+FLASK_APP -right-> FL_WTF
+FLASK_APP -right-> FL_LIM
+FLASK_APP -down-> DB_MYSQL   : SQLAlchemy\n(TCP 3306)
+FLASK_APP -right-> FL_MAIL
+FL_MAIL  -down-> SMTP        : SMTP\n(TCP 25/587)
+SMTP     -right-> CLIENT     : e-mail\n(IMAP/webmail)
+SERVER   -left-> STATIC      : servi par\nGunicorn ou Nginx
+
+' ─────────────────────────────────────────
+' Connexions – Développement
+' ─────────────────────────────────────────
+DEV_FLASK -down-> DB_SQLITE  : SQLAlchemy\n(fichier local)
+DEV_FLASK -down-> MAILHOG    : SMTP TCP 1025
+
+note right of SERVER
+  Variables d'environnement (.env) :
+  SECRET_KEY, DATABASE_URL,
+  MAIL_SERVER, MAIL_PORT,
+  MAIL_USERNAME, MAIL_PASSWORD
+end note
+
+note right of DEV
+  Dev : aucun e-mail réel envoyé.
+  Mailhog intercepte tout.
+  UI : http://localhost:8025
+end note
+
+@enduml
