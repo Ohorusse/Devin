@@ -10,20 +10,39 @@
                     <th>Nom</th>
                     <th>E-mail</th>
                     <th>Rôle</th>
-                    <th>Actif</th>
+                    <th>Statut</th>
                     <th>Inscription</th>
                     <th>Dernière connexion</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
             {% for u in users %}
             <tr>
                 <td class="font-bold">{{ u.prenom }} {{ u.nom }}</td>
-                <td>{{ u.email }}</td>
-                <td>{{ u.role }}</td>
-                <td>{{ '✓' if u.est_actif else '✗' }}</td>
-                <td>{{ u.date_inscription.strftime('%d/%m/%Y') }}</td>
-                <td>{{ u.derniere_connexion.strftime('%d/%m/%Y') if u.derniere_connexion else '–' }}</td>
+                <td class="text-sm">{{ u.email }}</td>
+                <td>
+                    <span class="badge {% if u.role == 'administrateur' %}badge-warning{% else %}badge-secondary{% endif %}">
+                        {{ u.role }}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge {% if u.est_actif %}badge-success{% else %}badge-danger{% endif %}">
+                        {{ 'Actif' if u.est_actif else 'Inactif' }}
+                    </span>
+                </td>
+                <td class="text-sm">{{ u.date_inscription.strftime('%d/%m/%Y') }}</td>
+                <td class="text-sm text-muted">{{ u.derniere_connexion.strftime('%d/%m/%Y') if u.derniere_connexion else '–' }}</td>
+                <td>
+                    {% if not u.est_admin %}
+                    <form method="POST" action="{{ url_for('admin.toggle_utilisateur', id=u.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm {% if u.est_actif %}btn-danger{% else %}btn-success{% endif %}">
+                            {{ 'Désactiver' if u.est_actif else 'Activer' }}
+                        </button>
+                    </form>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
             </tbody>

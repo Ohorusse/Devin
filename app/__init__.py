@@ -46,4 +46,14 @@ def create_app(config_name='default'):
         from flask import render_template
         return render_template('errors/404.html'), 404
 
+    @app.errorhandler(403)
+    def acces_interdit(e):
+        from flask import render_template
+        return render_template('errors/403.html'), 403
+
+    @app.errorhandler(500)
+    def erreur_serveur(e):
+        from flask import render_template
+        return render_template('errors/500.html'), 500
+
     return app

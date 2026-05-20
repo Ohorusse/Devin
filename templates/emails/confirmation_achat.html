@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F7FA;margin:0;padding:2rem;">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1);">
+
+        <!-- En-tête de marque -->
+        <div style="background:#2D6CDF;padding:1.5rem 2rem;">
+            <span style="color:#fff;font-size:1.25rem;font-weight:600;">TicketSecure</span>
+        </div>
+
+        <div style="padding:2rem;">
+
+            <!-- Titre de confirmation -->
+            <h2 style="color:#1B2A4A;margin:0 0 0.25rem;">Commande confirmée ✓</h2>
+            <p style="color:#666;margin:0 0 1.5rem;font-size:0.9rem;">
+                Bonjour {{ commande.utilisateur.prenom }}, votre réservation a bien été enregistrée.
+            </p>
+
+            <!-- Récapitulatif événement -->
+            <div style="background:#F5F7FA;border-radius:6px;padding:1.25rem;margin-bottom:1.5rem;">
+                <p style="color:#1B2A4A;font-weight:600;font-size:1rem;margin:0 0 0.75rem;">
+                    {{ commande.spectacle.titre }}
+                </p>
+                <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                    <tr>
+                        <td style="color:#666;padding:0.3rem 0;">Date</td>
+                        <td style="color:#1B2A4A;text-align:right;">
+                            {{ commande.spectacle.date_heure.strftime('%d %B %Y à %H:%M') }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:#666;padding:0.3rem 0;">Lieu</td>
+                        <td style="color:#1B2A4A;text-align:right;">{{ commande.spectacle.lieu }}</td>
+                    </tr>
+                    <tr>
+                        <td style="color:#666;padding:0.3rem 0;">Quantité</td>
+                        <td style="color:#1B2A4A;text-align:right;">{{ commande.quantite }} ticket(s)</td>
+                    </tr>
+                    <tr>
+                        <td style="color:#666;padding:0.3rem 0;">Prix unitaire</td>
+                        <td style="color:#1B2A4A;text-align:right;">
+                            {{ '%.2f'|format(commande.spectacle.prix_unitaire) }} €
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Séparateur -->
+                <div style="border-top:1px solid #E0E4EB;margin:0.75rem 0;"></div>
+
+                <!-- Total -->
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="color:#1B2A4A;font-weight:600;">Total</span>
+                    <span style="color:#2D6CDF;font-size:1.25rem;font-weight:700;">
+                        {{ '%.2f'|format(commande.montant_total) }} €
+                    </span>
+                </div>
+            </div>
+
+            <!-- Numéro de facture -->
+            <p style="color:#666;font-size:0.85rem;margin:0 0 1.5rem;">
+                N° facture : <strong style="color:#1B2A4A;">{{ commande.numero_facture }}</strong>
+                &nbsp;·&nbsp;
+                Commande du {{ commande.date_commande.strftime('%d/%m/%Y à %H:%M') }}
+            </p>
+
+            <!-- Bouton lien facture -->
+            <a href="{{ lien_facture }}"
+               style="display:inline-block;padding:0.75rem 1.5rem;background:#2D6CDF;color:#fff;
+                      text-decoration:none;border-radius:6px;font-weight:500;">
+                Voir ma facture en ligne
+            </a>
+
+            <!-- Note MVP -->
+            <p style="margin-top:1.5rem;color:#888;font-size:0.8rem;">
+                Aucun paiement réel n'a été effectué (plateforme de démonstration).
+            </p>
+        </div>
+    </div>
+</body>
+</html>

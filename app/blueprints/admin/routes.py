@@ -60,7 +60,27 @@ def nouveau_spectacle():
         flash('Spectacle créé.', 'success')
         return redirect(url_for('admin.spectacles'))
 
-    return render_template('admin/spectacle_form.html')
+    return render_template('admin/spectacle_form.html', spectacle=None)
+
+
+@admin_bp.route('/spectacles/<int:id>/modifier', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def modifier_spectacle(id):
+    spectacle = Spectacle.query.get_or_404(id)
+    if request.method == 'POST':
+        spectacle.titre = request.form['titre']
+        spectacle.description = request.form.get('description', '')
+        spectacle.date_heure = datetime.fromisoformat(request.form['date_heure'])
+        spectacle.lieu = request.form['lieu']
+        spectacle.prix_unitaire = request.form['prix_unitaire']
+        spectacle.categorie = request.form.get('categorie', '')
+        spectacle.illustration_url = request.form.get('illustration_url', '')
+        db.session.commit()
+        flash('Spectacle mis à jour.', 'success')
+        return redirect(url_for('admin.spectacles'))
+
+    return render_template('admin/spectacle_form.html', spectacle=spectacle)
 
 
 @admin_bp.route('/spectacles/<int:id>/supprimer', methods=['POST'])
@@ -80,6 +100,21 @@ def supprimer_spectacle(id):
 def utilisateurs():
     users = Utilisateur.query.order_by(Utilisateur.date_inscription.desc()).all()
     return render_template('admin/utilisateurs.html', users=users)
+
+
+@admin_bp.route('/utilisateurs/<int:id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_utilisateur(id):
+    user = Utilisateur.query.get_or_404(id)
+    if user.est_admin:
+        flash('Impossible de modifier le statut d\'un administrateur.', 'danger')
+        return redirect(url_for('admin.utilisateurs'))
+    user.est_actif = not user.est_actif
+    db.session.commit()
+    action = 'activé' if user.est_actif else 'désactivé'
+    flash(f'Compte de {user.prenom} {user.nom} {action}.', 'success')
+    return redirect(url_for('admin.utilisateurs'))
 
 
 @admin_bp.route('/avis')

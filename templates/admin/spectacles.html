@@ -15,27 +15,80 @@
                     <th>Prix</th>
                     <th>Places</th>
                     <th>Statut</th>
-                    <th>Action</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
             {% for s in spectacles %}
             <tr>
                 <td class="font-bold">{{ s.titre }}</td>
-                <td>{{ s.date_heure.strftime('%d/%m/%Y') }}</td>
+                <td class="text-sm">{{ s.date_heure.strftime('%d/%m/%Y %H:%M') }}</td>
                 <td>{{ '%.2f'|format(s.prix_unitaire) }} €</td>
-                <td>{{ s.places_restantes }}/{{ s.capacite_totale }}</td>
-                <td>{{ 'Actif' if s.est_actif else 'Inactif' }}</td>
                 <td>
-                    <form method="POST" action="{{ url_for('admin.supprimer_spectacle', id=s.id) }}" style="display:inline;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Désactiver cet événement ?')">Désactiver</button>
-                    </form>
+                    {% if s.places_restantes == 0 %}
+                        <span class="badge badge-danger">Complet</span>
+                    {% else %}
+                        {{ s.places_restantes }}/{{ s.capacite_totale }}
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge {% if s.est_actif %}badge-success{% else %}badge-secondary{% endif %}">
+                        {{ 'Actif' if s.est_actif else 'Inactif' }}
+                    </span>
+                </td>
+                <td>
+                    <div class="flex gap-1 flex-wrap">
+                        <a href="{{ url_for('admin.modifier_spectacle', id=s.id) }}" class="btn btn-secondary btn-sm">Modifier</a>
+                        <a href="{{ url_for('catalogue.detail', id=s.id) }}" class="btn btn-secondary btn-sm" target="_blank">Voir</a>
+                        {% if s.est_actif %}
+                        <form method="POST" action="{{ url_for('admin.supprimer_spectacle', id=s.id) }}" style="display:inline;" id="deact-{{ s.id }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="button" class="btn btn-danger btn-sm"
+                                    onclick="confirmerDesactivation({{ s.id }}, '{{ s.titre|e }}')">Désactiver</button>
+                        </form>
+                        {% endif %}
+                    </div>
                 </td>
             </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-muted" style="padding:2rem;">Aucun événement.</td></tr>
             {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<!-- Modal de confirmation -->
+<div id="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;">
+    <div class="card" style="max-width:420px;width:90%;padding:2rem;">
+        <h2 class="mb-2">Désactiver l'événement ?</h2>
+        <p id="modal-text" class="mb-3"></p>
+        <div class="flex gap-1">
+            <button class="btn btn-danger" id="modal-confirm">Désactiver</button>
+            <button class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let formId = null;
+function confirmerDesactivation(id, titre) {
+    formId = id;
+    document.getElementById('modal-text').textContent = 'L\'événement "' + titre + '" sera désactivé et ne sera plus visible.';
+    const overlay = document.getElementById('modal-overlay');
+    overlay.style.display = 'flex';
+}
+function fermerModal() {
+    document.getElementById('modal-overlay').style.display = 'none';
+    formId = null;
+}
+document.getElementById('modal-confirm').addEventListener('click', function() {
+    if (formId !== null) {
+        document.getElementById('deact-' + formId).submit();
+    }
+});
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+    if (e.target === this) fermerModal();
+});
+</script>
 {% endblock %}

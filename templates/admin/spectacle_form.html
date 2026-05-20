@@ -1,46 +1,59 @@
 {% extends "base.html" %}
-{% block title %}Nouvel événement – Admin{% endblock %}
+{% block title %}{% if spectacle %}Modifier – {{ spectacle.titre }}{% else %}Nouvel événement{% endif %} – Admin{% endblock %}
 {% block content %}
 <div class="page-sm">
-    <h1 class="mb-3">Nouvel événement</h1>
+    <div class="flex-between mb-3">
+        <h1>{% if spectacle %}Modifier l'événement{% else %}Nouvel événement{% endif %}</h1>
+        <a href="{{ url_for('admin.spectacles') }}" class="btn btn-secondary btn-sm">← Retour</a>
+    </div>
     <div class="card">
         <div class="card-body-lg">
             <form method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
-                    <label>Titre</label>
-                    <input type="text" name="titre" required>
+                    <label for="titre">Titre</label>
+                    <input type="text" id="titre" name="titre" required
+                           value="{{ spectacle.titre if spectacle else '' }}">
                 </div>
                 <div class="form-group">
-                    <label>Description</label>
-                    <textarea name="description" rows="4"></textarea>
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" rows="4">{{ spectacle.description if spectacle else '' }}</textarea>
                 </div>
                 <div class="form-group">
-                    <label>Date et heure</label>
-                    <input type="datetime-local" name="date_heure" required>
+                    <label for="date_heure">Date et heure</label>
+                    <input type="datetime-local" id="date_heure" name="date_heure" required
+                           value="{{ spectacle.date_heure.strftime('%Y-%m-%dT%H:%M') if spectacle else '' }}">
                 </div>
                 <div class="form-group">
-                    <label>Lieu</label>
-                    <input type="text" name="lieu" required>
+                    <label for="lieu">Lieu</label>
+                    <input type="text" id="lieu" name="lieu" required
+                           value="{{ spectacle.lieu if spectacle else '' }}">
                 </div>
                 <div class="form-group">
-                    <label>Prix unitaire (€)</label>
-                    <input type="number" name="prix_unitaire" step="0.01" min="0" required>
+                    <label for="prix_unitaire">Prix unitaire (€)</label>
+                    <input type="number" id="prix_unitaire" name="prix_unitaire" step="0.01" min="0" required
+                           value="{{ '%.2f'|format(spectacle.prix_unitaire) if spectacle else '' }}">
+                </div>
+                {% if not spectacle %}
+                <div class="form-group">
+                    <label for="capacite_totale">Capacité totale</label>
+                    <input type="number" id="capacite_totale" name="capacite_totale" min="1" required>
+                </div>
+                {% endif %}
+                <div class="form-group">
+                    <label for="categorie">Catégorie</label>
+                    <input type="text" id="categorie" name="categorie" placeholder="concert, théâtre, danse…"
+                           value="{{ spectacle.categorie if spectacle else '' }}">
                 </div>
                 <div class="form-group">
-                    <label>Capacité totale</label>
-                    <input type="number" name="capacite_totale" min="1" required>
-                </div>
-                <div class="form-group">
-                    <label>Catégorie</label>
-                    <input type="text" name="categorie" placeholder="concert, théâtre, danse…">
-                </div>
-                <div class="form-group">
-                    <label>URL de l'affiche (optionnel)</label>
-                    <input type="url" name="illustration_url">
+                    <label for="illustration_url">URL de l'affiche (optionnel)</label>
+                    <input type="url" id="illustration_url" name="illustration_url"
+                           value="{{ spectacle.illustration_url if spectacle else '' }}">
                 </div>
                 <div class="form-actions flex gap-1">
-                    <button type="submit" class="btn btn-primary btn-lg">Créer l'événement</button>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        {% if spectacle %}Enregistrer{% else %}Créer l'événement{% endif %}
+                    </button>
                     <a href="{{ url_for('admin.spectacles') }}" class="btn btn-secondary btn-lg">Annuler</a>
                 </div>
             </form>

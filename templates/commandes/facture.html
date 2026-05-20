@@ -2,34 +2,44 @@
 {% block title %}Facture {{ commande.numero_facture }} – TicketSecure{% endblock %}
 {% block content %}
 <div class="centered">
-    <div style="width:100%;max-width:480px;">
+    <div style="width:100%;max-width:520px;">
         <div class="card">
             <div class="card-body-lg">
-                <h1 class="text-center mb-3">Commande confirmée ✓</h1>
+                <div class="text-center mb-3">
+                    <span style="font-size:2.5rem;color:#198754;">✓</span>
+                    <h1 class="mt-1">Commande confirmée</h1>
+                    <p class="text-sm text-muted">N° {{ commande.numero_facture }}</p>
+                </div>
+
+                <hr class="divider">
 
                 <h2 class="mb-2">Récapitulatif</h2>
 
                 <div class="summary-row"><span>Événement</span><span>{{ commande.spectacle.titre }}</span></div>
-                <div class="summary-row"><span>Date</span><span>{{ commande.spectacle.date_heure.strftime('%d/%m/%Y à %H:%M') }}</span></div>
+                <div class="summary-row"><span>Date</span><span>{{ commande.spectacle.date_heure.strftime('%d %B %Y à %H:%M') }}</span></div>
                 <div class="summary-row"><span>Lieu</span><span>{{ commande.spectacle.lieu }}</span></div>
                 <div class="summary-row"><span>Quantité</span><span>{{ commande.quantite }} ticket(s)</span></div>
                 <div class="summary-row"><span>Prix unitaire</span><span>{{ '%.2f'|format(commande.spectacle.prix_unitaire) }} €</span></div>
 
                 <hr class="divider">
 
-                <div class="summary-total mb-3">
-                    <span class="total-label">Total payé</span>
+                <div class="summary-total mb-2">
+                    <span class="total-label">Total</span>
                     <span class="total-value">{{ '%.2f'|format(commande.montant_total) }} €</span>
                 </div>
 
                 <hr class="divider">
 
                 <div class="summary-row"><span>Client</span><span>{{ commande.utilisateur.prenom }} {{ commande.utilisateur.nom }}</span></div>
-                <div class="summary-row"><span>N° facture</span><span>{{ commande.numero_facture }}</span></div>
-                <div class="summary-row"><span>Date commande</span><span>{{ commande.date_commande.strftime('%d/%m/%Y à %H:%M') }}</span></div>
-                <div class="summary-row"><span>Statut</span><span>{{ commande.statut }}</span></div>
+                <div class="summary-row"><span>Date commande</span><span>{{ commande.date_commande.strftime('%d %B %Y à %H:%M') }}</span></div>
+                <div class="summary-row">
+                    <span>Statut</span>
+                    <span><span class="badge badge-success">{{ commande.statut }}</span></span>
+                </div>
 
-                <div class="mt-3 flex gap-1">
+                <p class="text-center text-sm text-muted mt-3">Aucun paiement réel n'a été effectué (MVP)</p>
+
+                <div class="mt-3 flex gap-1 flex-wrap">
                     <a href="{{ url_for('commandes.mes_commandes') }}" class="btn btn-secondary">Mes commandes</a>
                     <a href="{{ url_for('catalogue.index') }}" class="btn btn-primary">Retour au catalogue</a>
                 </div>

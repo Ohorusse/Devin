@@ -2,7 +2,10 @@
 {% block title %}Modération – Admin{% endblock %}
 {% block content %}
 <div class="page-md">
-    <h1 class="mb-3">Avis en attente ({{ avis_list|length }})</h1>
+    <div class="flex-between mb-3">
+        <h1>Avis en attente ({{ avis_list|length }})</h1>
+        <a href="{{ url_for('admin.index') }}" class="btn btn-secondary btn-sm">← Tableau de bord</a>
+    </div>
     {% for a in avis_list %}
     <div class="card mb-2">
         <div class="card-body">
@@ -10,7 +13,9 @@
                 <span class="font-bold">{{ a.utilisateur.prenom }} {{ a.utilisateur.nom }}</span>
                 <span class="stars">{{ '★' * a.note }}{{ '☆' * (5 - a.note) }}</span>
             </div>
-            <p class="text-sm text-muted mb-1">{{ a.spectacle.titre }}</p>
+            <p class="text-sm text-muted mb-1">
+                <strong>{{ a.spectacle.titre }}</strong> · {{ a.date_avis.strftime('%d %B %Y à %H:%M') }}
+            </p>
             <p style="line-height:1.6;" class="mb-2">{{ a.commentaire }}</p>
             <div class="flex gap-1">
                 <form method="POST" action="{{ url_for('admin.valider_avis', id=a.id) }}">
@@ -31,8 +36,5 @@
         </div>
     </div>
     {% endfor %}
-    <div class="mt-2">
-        <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">← Retour au tableau de bord</a>
-    </div>
 </div>
 {% endblock %}

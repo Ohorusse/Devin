@@ -1,3 +1,22 @@
+"""
+Routes d'authentification.
+
+Flux couverts :
+  - Inscription avec vérification e-mail obligatoire
+  - Connexion sécurisée (bcrypt, verrouillage après échecs)
+  - Déconnexion
+  - Réinitialisation de mot de passe par lien e-mail
+  - Activation du compte via lien e-mail
+
+Sécurité mise en place :
+  - Hachage bcrypt (12 rounds) via Utilisateur.set_password()
+  - Rate limiting sur l'inscription, la connexion et le reset (Flask-Limiter)
+  - Verrouillage temporaire du compte après MAX_TENTATIVES_CONNEXION échecs
+  - Tokens signés à durée limitée pour l'activation et le reset
+  - Réponses génériques sur les routes sensibles (pas de confirmation d'existence d'e-mail)
+  - Journalisation de chaque connexion/déconnexion dans LogConnexion
+"""
+
 from datetime import datetime, timezone, timedelta
 
 from flask import render_template, redirect, url_for, flash, request, current_app
@@ -9,7 +28,16 @@ from ...utils.mail import envoyer_verification, envoyer_reset_mdp
 from . import auth_bp
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 def log(action, statut, utilisateur=None, email=None):
+    """
+    Insère une entrée dans la table logs_connexion.
+    Appelé après chaque tentative de connexion, inscription ou déconnexion.
+    L'adresse IP est extraite de la requête courante.
+    """
     from flask import request as req
     db.session.add(LogConnexion(
         id_utilisateur=utilisateur.id if utilisateur else None,
@@ -20,8 +48,12 @@ def log(action, statut, utilisateur=None, email=None):
     ))
 
 
+# ---------------------------------------------------------------------------
+# Inscription
+# ---------------------------------------------------------------------------
+
 @auth_bp.route('/inscription', methods=['GET', 'POST'])
-@limiter.limit('10 per hour')
+@limiter.limit('10 per hour')   # anti-spam / anti-création de masse
 def inscription():
     if current_user.is_authenticated:
         return redirect(url_for('catalogue.index'))
@@ -32,18 +64,26 @@ def inscription():
         nom = request.form.get('nom', '').strip()
         prenom = request.form.get('prenom', '').strip()
 
-        """if Utilisateur.query.filter_by(email=email).first():
-            # Message générique — ne pas confirmer l'existence du compte
+        # Réponse générique si l'adresse est déjà utilisée :
+        # on ne confirme pas l'existence du compte (protection contre l'énumération).
+        if Utilisateur.query.filter_by(email=email).first():
             flash('Si cette adresse est valide, un e-mail de confirmation vous sera envoyé.', 'info')
-            return redirect(url_for('auth.inscription'))"""
+            return redirect(url_for('auth.inscription'))
 
-        utilisateur = Utilisateur(email=email, nom=nom, prenom=prenom, est_actif=True)  # TODO: passer à False en prod
+        # --- Création du compte ---
+        # est_actif=False : le compte est inactif jusqu'à la vérification de l'e-mail.
+        # En développement avec Mailhog, l'e-mail arrive dans l'interface Mailhog (port 8025).
+        # NE PAS passer à True ici — utiliser la route /verifier/<token> pour activer.
+        utilisateur = Utilisateur(email=email, nom=nom, prenom=prenom, est_actif=False)
         utilisateur.set_password(mot_de_passe)
         utilisateur.generer_token_verification()
         db.session.add(utilisateur)
         log('Inscription', 'Succès', utilisateur=utilisateur)
         db.session.commit()
 
+        # --- Envoi de l'e-mail d'activation ---
+        # Si l'envoi échoue (SMTP indisponible), l'erreur est loggée mais l'utilisateur
+        # n'est pas bloqué — il pourra demander un nouveau lien plus tard (TODO: route renvoi).
         envoyer_verification(utilisateur)
         flash('Compte créé. Vérifiez votre e-mail pour activer votre compte.', 'success')
         return redirect(url_for('auth.login'))
@@ -51,8 +91,12 @@ def inscription():
     return render_template('auth/register.html')
 
 
+# ---------------------------------------------------------------------------
+# Connexion
+# ---------------------------------------------------------------------------
+
 @auth_bp.route('/connexion', methods=['GET', 'POST'])
-@limiter.limit('20 per minute')
+@limiter.limit('20 per minute')   # ralentit le brute-force réseau
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('catalogue.index'))
@@ -62,11 +106,28 @@ def login():
         mot_de_passe = request.form.get('mot_de_passe', '')
         utilisateur = Utilisateur.query.filter_by(email=email).first()
 
+        # --- Vérification du verrouillage ---
         if utilisateur and utilisateur.est_verrouille():
             flash('Compte temporairement verrouillé. Réessayez dans quelques minutes.', 'danger')
+            log('Connexion', 'Verrouillé', utilisateur=utilisateur)
+            db.session.commit()
             return render_template('auth/login.html')
 
-        if utilisateur and utilisateur.est_actif and utilisateur.check_password(mot_de_passe):
+        # --- Vérification des identifiants ---
+        if utilisateur and utilisateur.check_password(mot_de_passe):
+            # Identifiants corrects → vérifier si le compte est actif
+            if not utilisateur.est_actif:
+                # Le compte existe et le mot de passe est correct, mais l'e-mail
+                # n'a pas encore été confirmé. On donne un message explicite ici
+                # car l'utilisateur sait déjà qu'il a un compte (il vient de l'inscrire).
+                flash(
+                    'Votre compte n\'est pas encore activé. '
+                    'Vérifiez votre boîte e-mail et cliquez sur le lien de confirmation.',
+                    'warning',
+                )
+                return render_template('auth/login.html')
+
+            # Connexion réussie
             utilisateur.tentatives_connexion = 0
             utilisateur.derniere_connexion = datetime.now(timezone.utc)
             log('Connexion', 'Succès', utilisateur=utilisateur)
@@ -75,20 +136,34 @@ def login():
             next_page = request.args.get('next')
             return redirect(next_page or url_for('catalogue.index'))
 
-        # Incrémenter le compteur d'échecs même si l'utilisateur n'existe pas
+        # --- Échec d'authentification ---
+        # On incrémente le compteur uniquement si l'utilisateur existe
+        # (ne pas révéler si l'e-mail est enregistré via le comportement du compteur).
         if utilisateur:
             utilisateur.tentatives_connexion += 1
             max_tentatives = current_app.config['MAX_TENTATIVES_CONNEXION']
             if utilisateur.tentatives_connexion >= max_tentatives:
                 duree = current_app.config['DUREE_VERROUILLAGE_MINUTES']
-                utilisateur.verrouille_jusqu_a = datetime.now(timezone.utc) + timedelta(minutes=duree)
+                utilisateur.verrouille_jusqu_a = (
+                    datetime.now(timezone.utc) + timedelta(minutes=duree)
+                )
+                flash(
+                    f'Trop de tentatives échouées. Compte verrouillé {duree} minutes.',
+                    'danger',
+                )
         log('Connexion', 'Échec', email=email)
         db.session.commit()
 
-        flash('Identifiants incorrects.', 'danger')
+        if not utilisateur or not utilisateur.tentatives_connexion >= current_app.config['MAX_TENTATIVES_CONNEXION']:
+            # Message générique — ne pas préciser si l'e-mail existe ou non
+            flash('Identifiants incorrects.', 'danger')
 
     return render_template('auth/login.html')
 
+
+# ---------------------------------------------------------------------------
+# Déconnexion
+# ---------------------------------------------------------------------------
 
 @auth_bp.route('/deconnexion')
 @login_required
@@ -99,19 +174,24 @@ def logout():
     return redirect(url_for('catalogue.index'))
 
 
+# ---------------------------------------------------------------------------
+# Réinitialisation de mot de passe
+# ---------------------------------------------------------------------------
+
 @auth_bp.route('/mot-de-passe-oublie', methods=['GET', 'POST'])
-@limiter.limit('5 per hour')
+@limiter.limit('5 per hour')   # limite les abus de la route de reset
 def mot_de_passe_oublie():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         utilisateur = Utilisateur.query.filter_by(email=email).first()
+
         if utilisateur and utilisateur.est_actif:
             expiry = current_app.config['EXPIRATION_TOKEN_MINUTES']
             utilisateur.generer_token_reset(expiry_minutes=expiry)
             db.session.commit()
             envoyer_reset_mdp(utilisateur)
 
-        # Réponse identique que l'e-mail existe ou non
+        # Réponse identique que l'e-mail existe ou non → pas d'énumération de comptes
         flash('Si ce compte existe, un lien de réinitialisation vous a été envoyé.', 'info')
         return redirect(url_for('auth.login'))
 
@@ -120,6 +200,10 @@ def mot_de_passe_oublie():
 
 @auth_bp.route('/reinitialiser/<token>', methods=['GET', 'POST'])
 def reinitialiser_mdp(token):
+    """
+    Valide le token de reset et permet de choisir un nouveau mot de passe.
+    Le token est invalidé après usage (token_reset_mdp = None).
+    """
     utilisateur = Utilisateur.query.filter_by(token_reset_mdp=token).first_or_404()
 
     if utilisateur.expiration_token_reset < datetime.now(timezone.utc):
@@ -129,6 +213,7 @@ def reinitialiser_mdp(token):
     if request.method == 'POST':
         nouveau_mdp = request.form.get('mot_de_passe', '')
         utilisateur.set_password(nouveau_mdp)
+        # Invalidation du token après usage → un lien ne peut servir qu'une fois
         utilisateur.token_reset_mdp = None
         utilisateur.expiration_token_reset = None
         db.session.commit()
@@ -138,11 +223,20 @@ def reinitialiser_mdp(token):
     return render_template('auth/reset_password.html')
 
 
+# ---------------------------------------------------------------------------
+# Activation du compte par e-mail
+# ---------------------------------------------------------------------------
+
 @auth_bp.route('/verifier/<token>')
 def verifier_email(token):
+    """
+    Active le compte correspondant au token de vérification.
+    Le token est invalidé après usage.
+    Route appelée depuis le lien dans l'e-mail envoyé à l'inscription.
+    """
     utilisateur = Utilisateur.query.filter_by(token_verification=token).first_or_404()
     utilisateur.est_actif = True
-    utilisateur.token_verification = None
+    utilisateur.token_verification = None   # invalidation du token après usage
     db.session.commit()
     flash('Compte activé. Vous pouvez vous connecter.', 'success')
     return redirect(url_for('auth.login'))

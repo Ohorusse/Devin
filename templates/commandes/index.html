@@ -10,8 +10,11 @@
                 <h3>{{ c.spectacle.titre }}</h3>
                 <span class="font-bold text-primary">{{ '%.2f'|format(c.montant_total) }} €</span>
             </div>
-            <p class="text-sm mb-1">{{ c.spectacle.date_heure.strftime('%d/%m/%Y à %H:%M') }} – {{ c.spectacle.lieu }}</p>
-            <p class="text-sm text-muted mb-2">{{ c.quantite }} ticket(s) · Commande du {{ c.date_commande.strftime('%d/%m/%Y') }} · {{ c.statut }}</p>
+            <p class="text-sm mb-1">{{ c.spectacle.date_heure.strftime('%d %B %Y à %H:%M') }} – {{ c.spectacle.lieu }}</p>
+            <p class="text-sm text-muted mb-2">
+                {{ c.quantite }} ticket(s) · Commande du {{ c.date_commande.strftime('%d %B %Y') }}
+                &nbsp;<span class="badge {% if c.statut == 'confirmé' %}badge-success{% else %}badge-secondary{% endif %}">{{ c.statut }}</span>
+            </p>
             <a href="{{ url_for('commandes.facture', id=c.id) }}" class="btn btn-secondary btn-sm">Voir la facture</a>
         </div>
     </div>

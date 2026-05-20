@@ -1,15 +1,21 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="UTF-8"></head>
-<body style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:2rem;">
-    <h2>Bienvenue sur TicketSecure, {{ utilisateur.prenom }} !</h2>
-    <p>Cliquez sur le bouton ci-dessous pour activer votre compte :</p>
-    <a href="{{ lien }}" style="display:inline-block;padding:0.75rem 1.5rem;background:#333;color:#fff;text-decoration:none;border-radius:4px;">
-        Activer mon compte
-    </a>
-    <p style="margin-top:1.5rem;color:#888;font-size:0.85rem;">
-        Ce lien est valable 30 minutes. Si vous n'avez pas créé de compte, ignorez cet e-mail.
-    </p>
-    <p style="color:#888;font-size:0.85rem;">Ou copiez ce lien : {{ lien }}</p>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F7FA;margin:0;padding:2rem;">
+    <div style="max-width:500px;margin:0 auto;background:#ffffff;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1);">
+        <div style="background:#2D6CDF;padding:1.5rem 2rem;">
+            <span style="color:#fff;font-size:1.25rem;font-weight:600;">TicketSecure</span>
+        </div>
+        <div style="padding:2rem;">
+            <h2 style="color:#1B2A4A;margin:0 0 1rem;">Bienvenue, {{ utilisateur.prenom }} !</h2>
+            <p style="color:#666;margin:0 0 1.5rem;">Cliquez sur le bouton ci-dessous pour activer votre compte :</p>
+            <a href="{{ lien }}" style="display:inline-block;padding:0.75rem 1.5rem;background:#2D6CDF;color:#fff;text-decoration:none;border-radius:6px;font-weight:500;">
+                Activer mon compte
+            </a>
+            <p style="margin-top:1.5rem;color:#888;font-size:0.85rem;">
+                Ce lien est valable <strong>30 minutes</strong>. Si vous n'avez pas créé de compte, ignorez cet e-mail.
+            </p>
+        </div>
+    </div>
 </body>
 </html>
