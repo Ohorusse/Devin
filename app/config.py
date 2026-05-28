@@ -35,6 +35,12 @@ class DevelopmentConfig(Config):
     DEBUG = True
 
 
+class ServerConfig(Config):
+    # SQLite + DEBUG=False : pour déploiement sans MySQL (serveur école)
+    # Pas de SESSION_COOKIE_SECURE car pas de HTTPS obligatoire
+    DEBUG = False
+
+
 class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
@@ -44,6 +50,7 @@ class ProductionConfig(Config):
 
 config = {
     'development': DevelopmentConfig,
-    'production': ProductionConfig,
-    'default': DevelopmentConfig,
+    'server':      ServerConfig,
+    'production':  ProductionConfig,
+    'default':     DevelopmentConfig,
 }
