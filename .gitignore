@@ -15,6 +15,7 @@ instance/
 
 # Secrets
 .env
+env.txt
 
 # IDE
 .vscode/

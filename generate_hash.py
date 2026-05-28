@@ -23,6 +23,7 @@ def generer_hash():
     print(" Generateur de hash bcrypt -- TicketSecure")
     print("=" * 55)
     print()
+
     print("Ce hash sera place dans le .env du serveur.")
     print("Le mot de passe en clair n'est JAMAIS envoye.")
     print()

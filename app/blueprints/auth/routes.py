@@ -2,18 +2,16 @@
 Routes d'authentification.
 
 Flux couverts :
-  - Inscription avec vérification e-mail obligatoire
+  - Inscription (compte actif immédiatement, sans vérification e-mail)
   - Connexion sécurisée (bcrypt, verrouillage après échecs)
   - Déconnexion
   - Réinitialisation de mot de passe par lien e-mail
-  - Activation du compte via lien e-mail
 
 Sécurité mise en place :
   - Hachage bcrypt (12 rounds) via Utilisateur.set_password()
   - Rate limiting sur l'inscription, la connexion et le reset (Flask-Limiter)
   - Verrouillage temporaire du compte après MAX_TENTATIVES_CONNEXION échecs
-  - Tokens signés à durée limitée pour l'activation et le reset
-  - Réponses génériques sur les routes sensibles (pas de confirmation d'existence d'e-mail)
+  - Tokens signés à durée limitée pour le reset de mot de passe
   - Journalisation de chaque connexion/déconnexion dans LogConnexion
 """
 
@@ -24,7 +22,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 
 from ... import db, limiter
 from ...models import Utilisateur, LogConnexion
-from ...utils.mail import envoyer_verification, envoyer_reset_mdp
+from ...utils.mail import envoyer_reset_mdp
 from . import auth_bp
 
 
@@ -64,28 +62,19 @@ def inscription():
         nom = request.form.get('nom', '').strip()
         prenom = request.form.get('prenom', '').strip()
 
-        # Réponse générique si l'adresse est déjà utilisée :
-        # on ne confirme pas l'existence du compte (protection contre l'énumération).
+        # Réponse générique si l'adresse est déjà utilisée
         if Utilisateur.query.filter_by(email=email).first():
-            flash('Si cette adresse est valide, un e-mail de confirmation vous sera envoyé.', 'info')
+            flash('Cette adresse e-mail est déjà utilisée.', 'danger')
             return redirect(url_for('auth.inscription'))
 
-        # --- Création du compte ---
-        # est_actif=False : le compte est inactif jusqu'à la vérification de l'e-mail.
-        # En développement avec Mailhog, l'e-mail arrive dans l'interface Mailhog (port 8025).
-        # NE PAS passer à True ici — utiliser la route /verifier/<token> pour activer.
-        utilisateur = Utilisateur(email=email, nom=nom, prenom=prenom, est_actif=False)
+        # Compte actif immédiatement, sans vérification e-mail
+        utilisateur = Utilisateur(email=email, nom=nom, prenom=prenom, est_actif=True)
         utilisateur.set_password(mot_de_passe)
-        utilisateur.generer_token_verification()
         db.session.add(utilisateur)
         log('Inscription', 'Succès', utilisateur=utilisateur)
         db.session.commit()
 
-        # --- Envoi de l'e-mail d'activation ---
-        # Si l'envoi échoue (SMTP indisponible), l'erreur est loggée mais l'utilisateur
-        # n'est pas bloqué — il pourra demander un nouveau lien plus tard (TODO: route renvoi).
-        envoyer_verification(utilisateur)
-        flash('Compte créé. Vérifiez votre e-mail pour activer votre compte.', 'success')
+        flash('Compte créé. Vous pouvez vous connecter.', 'success')
         return redirect(url_for('auth.login'))
 
     return render_template('auth/register.html')
@@ -115,16 +104,9 @@ def login():
 
         # --- Vérification des identifiants ---
         if utilisateur and utilisateur.check_password(mot_de_passe):
-            # Identifiants corrects → vérifier si le compte est actif
+            # Compte désactivé manuellement par un admin
             if not utilisateur.est_actif:
-                # Le compte existe et le mot de passe est correct, mais l'e-mail
-                # n'a pas encore été confirmé. On donne un message explicite ici
-                # car l'utilisateur sait déjà qu'il a un compte (il vient de l'inscrire).
-                flash(
-                    'Votre compte n\'est pas encore activé. '
-                    'Vérifiez votre boîte e-mail et cliquez sur le lien de confirmation.',
-                    'warning',
-                )
+                flash('Votre compte a été désactivé. Contactez un administrateur.', 'danger')
                 return render_template('auth/login.html')
 
             # Connexion réussie
