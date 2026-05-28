@@ -28,6 +28,10 @@ import os
 import sys
 
 import bcrypt
+from dotenv import load_dotenv
+
+# Charger le .env AVANT de lire les variables d'environnement
+load_dotenv()
 
 from app import create_app, db
 from app.models import Utilisateur
@@ -70,7 +74,7 @@ def init_prod():
         print()
 
     # --- Initialisation Flask ---
-    app = create_app(os.environ.get("FLASK_ENV", "production"))
+    app = create_app(os.environ.get("FLASK_ENV", "server"))
 
     with app.app_context():
         print("[*] Creation des tables (si absentes)...")
