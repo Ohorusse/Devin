@@ -17,6 +17,8 @@ Sécurité mise en place :
 
 from datetime import datetime, timezone, timedelta
 
+from urllib.parse import urlparse
+
 from flask import render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 
@@ -61,6 +63,10 @@ def inscription():
         mot_de_passe = request.form.get('mot_de_passe', '')
         nom = request.form.get('nom', '').strip()
         prenom = request.form.get('prenom', '').strip()
+
+        if len(mot_de_passe) < 12:
+            flash('Le mot de passe doit contenir au moins 12 caractères.', 'danger')
+            return redirect(url_for('auth.inscription'))
 
         # Réponse générique si l'adresse est déjà utilisée
         if Utilisateur.query.filter_by(email=email).first():
@@ -116,6 +122,8 @@ def login():
             db.session.commit()
             login_user(utilisateur)
             next_page = request.args.get('next')
+            if next_page and urlparse(next_page).netloc:
+                next_page = None
             return redirect(next_page or url_for('catalogue.index'))
 
         # --- Échec d'authentification ---
@@ -194,6 +202,9 @@ def reinitialiser_mdp(token):
 
     if request.method == 'POST':
         nouveau_mdp = request.form.get('mot_de_passe', '')
+        if len(nouveau_mdp) < 12:
+            flash('Le mot de passe doit contenir au moins 12 caractères.', 'danger')
+            return redirect(request.url)
         utilisateur.set_password(nouveau_mdp)
         # Invalidation du token après usage → un lien ne peut servir qu'une fois
         utilisateur.token_reset_mdp = None

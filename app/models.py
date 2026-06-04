@@ -122,7 +122,7 @@ class Avis(db.Model):
     note = db.Column(db.Integer, nullable=False)
     commentaire = db.Column(db.Text)
     date_avis = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    est_valide = db.Column(db.Boolean, default=True)
+    est_valide = db.Column(db.Boolean, default=False, nullable=False)
 
     __table_args__ = (
         db.CheckConstraint('note >= 1 AND note <= 5', name='ck_avis_note'),

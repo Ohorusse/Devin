@@ -155,6 +155,7 @@ def deposer_avis(id_spectacle):
         id_spectacle=id_spectacle,
         note=note,
         commentaire=commentaire,
+        est_valide=False,
     )
     db.session.add(avis)
     db.session.commit()
